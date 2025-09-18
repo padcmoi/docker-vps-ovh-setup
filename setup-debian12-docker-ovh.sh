@@ -120,7 +120,7 @@ interactive_config() {
     
     # Port SSH
     while true; do
-        read -p "Port SSH [défaut 22] : " SSH_PORT_INPUT
+        read -e -p "Port SSH : " -i "22" SSH_PORT_INPUT
         SSH_PORT=${SSH_PORT_INPUT:-22}
         if validate_port "$SSH_PORT"; then
             break
@@ -131,7 +131,7 @@ interactive_config() {
     
     # Port Webmin  
     while true; do
-        read -p "Port Webmin [défaut 10000] : " WEBMIN_PORT_INPUT
+        read -e -p "Port Webmin : " -i "10000" WEBMIN_PORT_INPUT
         WEBMIN_PORT=${WEBMIN_PORT_INPUT:-10000}
         if validate_port "$WEBMIN_PORT" && [ "$WEBMIN_PORT" != "$SSH_PORT" ]; then
             break
@@ -142,7 +142,7 @@ interactive_config() {
     
     # Port Portainer
     while true; do
-        read -p "Port Portainer [défaut 9000] : " PORTAINER_PORT_INPUT
+        read -e -p "Port Portainer : " -i "9000" PORTAINER_PORT_INPUT
         PORTAINER_PORT=${PORTAINER_PORT_INPUT:-9000}
         if validate_port "$PORTAINER_PORT" && [ "$PORTAINER_PORT" != "$SSH_PORT" ] && [ "$PORTAINER_PORT" != "$WEBMIN_PORT" ]; then
             break
@@ -154,16 +154,16 @@ interactive_config() {
     # Utilisateurs SSH autorisés
     echo ""
     print_info "Sécurité SSH - Utilisateurs autorisés"
-    read -p "Utilisateurs SSH autorisés [défaut: root debian] : " SSH_USERS_INPUT
+    read -e -p "Utilisateurs SSH autorisés : " -i "root debian" SSH_USERS_INPUT
     SSH_ALLOWED_USERS=${SSH_USERS_INPUT:-"root debian"}
     
     # Configuration Fail2ban
     echo ""
     print_info "Protection Fail2ban (anti-bots SSH)"
-    read -p "Nombre max tentatives connexion [défaut: 5] : " FAIL2BAN_MAXRETRY
+    read -e -p "Nombre max tentatives connexion : " -i "5" FAIL2BAN_MAXRETRY
     FAIL2BAN_MAXRETRY=${FAIL2BAN_MAXRETRY:-5}
     
-    read -p "Durée de ban en secondes [défaut: 3600] : " FAIL2BAN_BANTIME
+    read -e -p "Durée de ban en secondes : " -i "3600" FAIL2BAN_BANTIME
     FAIL2BAN_BANTIME=${FAIL2BAN_BANTIME:-3600}
     
     # Services optionnels
@@ -186,7 +186,7 @@ interactive_config() {
     echo ""
     print_info "Configuration des clés SSH (optionnel)"
     if ask_yes_no "Voulez-vous ajouter une clé SSH publique pour l'authentification sans mot de passe ?" "n"; then
-        read -p "Chemin vers votre clé publique [défaut: ~/.ssh/id_rsa.pub] : " SSH_KEY_PATH
+        read -e -p "Chemin vers votre clé publique : " -i "~/.ssh/id_rsa.pub" SSH_KEY_PATH
         SSH_KEY_PATH=${SSH_KEY_PATH:-"~/.ssh/id_rsa.pub"}
         
         if [[ -f "$SSH_KEY_PATH" ]]; then

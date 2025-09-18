@@ -10,10 +10,8 @@ echo "=============================================="
 
 # Saisie des informations VPS
 read -p "IP du VPS : " VPS_IP
-read -p "Port SSH (défaut 22) : " VPS_PORT
-VPS_PORT=${VPS_PORT:-22}
-read -p "Utilisateur (défaut: debian) : " VPS_USER
-VPS_USER=${VPS_USER:-debian}
+read -e -p "Port SSH : " -i "22" VPS_PORT
+read -e -p "Utilisateur : " -i "debian" VPS_USER
 
 echo ""
 echo "📋 VPS configuré : $VPS_USER@$VPS_IP:$VPS_PORT"
