@@ -12,8 +12,8 @@ echo "=============================================="
 read -p "IP du VPS : " VPS_IP
 read -p "Port SSH (défaut 22) : " VPS_PORT
 VPS_PORT=${VPS_PORT:-22}
-read -p "Utilisateur (défaut root) : " VPS_USER
-VPS_USER=${VPS_USER:-root}
+read -p "Utilisateur (défaut: debian) : " VPS_USER
+VPS_USER=${VPS_USER:-debian}
 
 echo ""
 echo "📋 VPS configuré : $VPS_USER@$VPS_IP:$VPS_PORT"
