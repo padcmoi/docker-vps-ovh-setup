@@ -113,43 +113,41 @@ interactive_config() {
     print_step "Configuration personnalisée de votre serveur"
     
     echo ""
-    print_info "🔧 Personnalisation des ports et services"
-    print_info "Appuyez sur Entrée pour garder la valeur par défaut"
+    print_header "CONFIGURATION DES PORTS"
+    echo "🔧 Configuration des ports personnalisés pour votre VPS"
+    echo "💡 Appuyez sur Entrée pour utiliser les ports par défaut recommandés"
     echo ""
     
-    # Configuration SSH
-    print_info "🔒 Configuration SSH sécurisée"
+    # Port SSH
     while true; do
-        read -p "Port SSH [22]: " SSH_PORT_INPUT
+        read -p "🔑 Port SSH (défaut: 22) : " SSH_PORT_INPUT
         SSH_PORT=${SSH_PORT_INPUT:-22}
         if validate_port "$SSH_PORT"; then
             break
         else
-            print_error "Port invalide. Choisissez un port entre 1-65535."
+            print_error "Port invalide. Utilisez un port entre 1 et 65535."
         fi
     done
     
-    # Configuration Webmin  
-    print_info "⚙️ Interface d'administration Webmin"
+    # Port Webmin  
     while true; do
-        read -p "Port Webmin [10000]: " WEBMIN_PORT_INPUT
+        read -p "🌐 Port Webmin (défaut: 10000) : " WEBMIN_PORT_INPUT
         WEBMIN_PORT=${WEBMIN_PORT_INPUT:-10000}
         if validate_port "$WEBMIN_PORT" && [ "$WEBMIN_PORT" != "$SSH_PORT" ]; then
             break
         else
-            print_error "Port invalide ou identique au port SSH. Choisissez un port différent."
+            print_error "Port invalide ou identique au port SSH ($SSH_PORT). Choisissez un port différent."
         fi
     done
     
-    # Configuration Portainer
-    print_info "🐳 Interface Docker Portainer"
+    # Port Portainer
     while true; do
-        read -p "Port Portainer [9000]: " PORTAINER_PORT_INPUT
+        read -p "🐳 Port Portainer (défaut: 9000) : " PORTAINER_PORT_INPUT
         PORTAINER_PORT=${PORTAINER_PORT_INPUT:-9000}
         if validate_port "$PORTAINER_PORT" && [ "$PORTAINER_PORT" != "$SSH_PORT" ] && [ "$PORTAINER_PORT" != "$WEBMIN_PORT" ]; then
             break
         else
-            print_error "Port invalide ou déjà utilisé. Choisissez un port différent."
+            print_error "Port invalide ou déjà utilisé. Ports pris: SSH=$SSH_PORT, Webmin=$WEBMIN_PORT"
         fi
     done
     
@@ -363,12 +361,33 @@ install_nginx_stack() {
     
     apt install -y nginx certbot python3-certbot-nginx whiptail
     
+    print_step "Configuration de Nginx..."
+    
+    # Sauvegarder la config par défaut
+    cp /etc/nginx/sites-available/default /etc/nginx/sites-available/default.backup
+    
+    # Arrêter nginx si démarré pour éviter les conflits
+    systemctl stop nginx 2>/dev/null || true
+    
     # Configuration nginx par défaut
     cp "$TEMPLATES_DIR/nginx-default.conf" /etc/nginx/sites-available/default
     
+    # Test de la configuration nginx
+    if ! nginx -t; then
+        print_error "Erreur dans la configuration Nginx"
+        print_info "Restauration de la config par défaut..."
+        cp /etc/nginx/sites-available/default.backup /etc/nginx/sites-available/default
+    fi
+    
+    # Démarrage de nginx avec vérification
     systemctl enable nginx
-    systemctl start nginx
-    systemctl reload nginx
+    if systemctl start nginx; then
+        print_success "Nginx démarré avec succès"
+        systemctl reload nginx
+    else
+        print_error "Erreur au démarrage de Nginx - Vérifiez les logs: journalctl -xeu nginx.service"
+        return 1
+    fi
     
     print_success "Stack Nginx installée"
 }
