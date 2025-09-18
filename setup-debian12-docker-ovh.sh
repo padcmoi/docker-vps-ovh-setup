@@ -495,7 +495,7 @@ main() {
     print_success "🎉 SERVEUR OVH DÉPLOYÉ AVEC SUCCÈS !"
     echo "=================================================================="
     echo ""
-    print_info "🔗 Accès à vos services :"
+    echo "Accès à vos services :"
     
     if [[ $SSH_PORT != "22" ]]; then
         echo "• SSH: ssh root@votre-serveur -p $SSH_PORT"
@@ -511,7 +511,7 @@ main() {
     
     echo "• Sites web: http://votre-serveur (nginx + SSL automatique)"
     echo ""
-    print_info "🛠️ Gestion des domaines/vhosts :"
+    echo "Gestion des domaines/vhosts :"
     echo "• vhost-manager.sh → Interface complète de gestion des domaines"
     echo ""
     print_warning "📝 IMPORTANT - Sauvegardez ces informations :"
