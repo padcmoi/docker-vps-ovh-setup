@@ -117,16 +117,33 @@ while true; do
             
             # Exécution du script d'installation sur le VPS
             if ssh -p $VPS_PORT $VPS_USER@$VPS_IP "
-                echo '🌐 Téléchargement du script d'\''installation...'
+                echo '🌐 Téléchargement des fichiers d'\''installation...'
+                
+                # Créer la structure de dossiers
+                mkdir -p templates/debian12-docker
+                mkdir -p scripts/debian12-docker
+                
+                # Télécharger le script principal
                 wget -q https://raw.githubusercontent.com/padcmoi/docker-vps-ovh-setup/main/setup-debian12-docker-ovh.sh
                 
-                if [ ! -f setup-debian12-docker-ovh.sh ]; then
-                    echo '❌ Erreur : Impossible de télécharger le script'
+                # Télécharger les templates
+                wget -q -O templates/debian12-docker/miniserv.conf https://raw.githubusercontent.com/padcmoi/docker-vps-ovh-setup/main/templates/debian12-docker/miniserv.conf
+                wget -q -O templates/debian12-docker/nginx-default.conf https://raw.githubusercontent.com/padcmoi/docker-vps-ovh-setup/main/templates/debian12-docker/nginx-default.conf
+                wget -q -O templates/debian12-docker/fail2ban-jail.local https://raw.githubusercontent.com/padcmoi/docker-vps-ovh-setup/main/templates/debian12-docker/fail2ban-jail.local
+                wget -q -O templates/debian12-docker/config.sample https://raw.githubusercontent.com/padcmoi/docker-vps-ovh-setup/main/templates/debian12-docker/config.sample
+                
+                # Télécharger les scripts
+                wget -q -O scripts/debian12-docker/vhost-manager.sh https://raw.githubusercontent.com/padcmoi/docker-vps-ovh-setup/main/scripts/debian12-docker/vhost-manager.sh
+                
+                # Vérifier que tout est téléchargé
+                if [ ! -f setup-debian12-docker-ovh.sh ] || [ ! -f templates/debian12-docker/miniserv.conf ] || [ ! -f scripts/debian12-docker/vhost-manager.sh ]; then
+                    echo '❌ Erreur : Impossible de télécharger tous les fichiers nécessaires'
                     exit 1
                 fi
                 
                 chmod +x setup-debian12-docker-ovh.sh
-                echo '✅ Script téléchargé avec succès'
+                chmod +x scripts/debian12-docker/vhost-manager.sh
+                echo '✅ Tous les fichiers téléchargés avec succès'
                 echo ''
                 echo '🚀 Lancement de l'\''installation automatique...'
                 echo '=============================================='
@@ -155,7 +172,10 @@ while true; do
             echo ""
             echo "2. Exécutez ces commandes :"
             echo "   wget https://raw.githubusercontent.com/padcmoi/docker-vps-ovh-setup/main/setup-debian12-docker-ovh.sh"
-            echo "   chmod +x setup-debian12-docker-ovh.sh"
+            echo "   mkdir -p templates/debian12-docker scripts/debian12-docker"
+            echo "   wget -O templates/debian12-docker/miniserv.conf https://raw.githubusercontent.com/padcmoi/docker-vps-ovh-setup/main/templates/debian12-docker/miniserv.conf"
+            echo "   wget -O scripts/debian12-docker/vhost-manager.sh https://raw.githubusercontent.com/padcmoi/docker-vps-ovh-setup/main/scripts/debian12-docker/vhost-manager.sh"
+            echo "   chmod +x setup-debian12-docker-ovh.sh scripts/debian12-docker/vhost-manager.sh"
             echo "   sudo ./setup-debian12-docker-ovh.sh"
             echo ""
             echo "🚀 Connexion au VPS..."
