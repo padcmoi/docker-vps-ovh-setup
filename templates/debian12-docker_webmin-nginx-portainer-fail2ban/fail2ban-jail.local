@@ -1,0 +1,6 @@
+[sshd]
+enabled = true
+port = __SSH_PORT__
+backend = systemd
+maxretry = __MAX_RETRY__
+bantime = __BAN_TIME__

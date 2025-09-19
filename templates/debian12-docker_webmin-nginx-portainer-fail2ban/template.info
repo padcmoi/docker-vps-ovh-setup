@@ -1,0 +1,3 @@
+DISPLAY_NAME="IMAGE: OVH Debian v12 Docker / STACK: Webmin+Nginx+Portainer+Fail2ban"
+DESCRIPTION="Debian v12 + Docker + Webmin + Nginx + Portainer + Fail2ban (OVH)"
+SCRIPT_NAME="setup.sh"

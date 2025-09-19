@@ -1,0 +1,20 @@
+# Configuration par défaut pour l'installation OVH Debian 12
+# Copiez ce fichier vers config.env et modifiez les valeurs selon vos besoins
+
+# Ports de sécurité (changez ces valeurs !)
+SSH_PORT=22
+WEBMIN_PORT=10000
+
+# Utilisateurs SSH autorisés (séparés par des espaces)
+SSH_ALLOWED_USERS="root debian"
+
+# Configuration Fail2ban
+FAIL2BAN_MAXRETRY=5
+FAIL2BAN_BANTIME=3600
+
+# Configuration par défaut (ne pas modifier sauf cas spécial)
+INSTALL_WEBMIN=true
+INSTALL_NGINX=true
+INSTALL_CERTBOT=true
+INSTALL_FAIL2BAN=true
+REMOVE_EXIM4=true
