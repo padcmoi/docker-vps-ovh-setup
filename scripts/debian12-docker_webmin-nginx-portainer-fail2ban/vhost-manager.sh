@@ -75,7 +75,7 @@ server {
     
     location / {
         proxy_pass $TARGET;
-        proxy_set_header Host $host;
+        proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto \$scheme;
@@ -149,8 +149,7 @@ server {
     server_name $DOMAIN www.$DOMAIN;
     location / {
         proxy_pass $TARGET;
-        proxy_set_header Host $host;
-        # proxy_set_header Host $(if [[ "$TARGET" =~ ^https?://([^/]+) ]]; then echo "${BASH_REMATCH[1]}"; else echo "\$host"; fi);
+        proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto \$scheme;
@@ -173,8 +172,7 @@ server {
     ssl_certificate_key $KEY_PATH;
     location / {
         proxy_pass $TARGET;
-        proxy_set_header Host $host;
-        # proxy_set_header Host $(if [[ "$TARGET" =~ ^https?://([^/]+) ]]; then echo "${BASH_REMATCH[1]}"; else echo "\$host"; fi);
+        proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto \$scheme;
@@ -188,7 +186,7 @@ server {
     server_name $DOMAIN www.$DOMAIN;
     location / {
         proxy_pass $TARGET;
-        proxy_set_header Host $host;
+        proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto \$scheme;
@@ -202,8 +200,7 @@ server {
     ssl_certificate_key $KEY_PATH;
     location / {
         proxy_pass $TARGET;
-        proxy_set_header Host $host;
-        # proxy_set_header Host $(if [[ "$TARGET" =~ ^https?://([^/]+) ]]; then echo "${BASH_REMATCH[1]}"; else echo "\$host"; fi);
+        proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto \$scheme;
