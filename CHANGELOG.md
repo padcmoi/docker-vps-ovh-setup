@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [1.0.1] - 2025-09-29
+
+### Fixed
+
+- Correction du bug nginx avec `proxy_set_header Host $host;` remplaçant la logique complexe commentée pour améliorer la stabilité du reverse proxy
+
 ## [1.0.0] - 2025-09-19
 
 ### Added
