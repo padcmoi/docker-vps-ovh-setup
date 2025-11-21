@@ -1,0 +1,7 @@
+fix: post commit changelog
+fix: step 3
+fix: step 2
+fix: step 1
+chore: persist current version v1.1.1
+Version bump to 1.1.1
+docs: update changelog to 1.1.0

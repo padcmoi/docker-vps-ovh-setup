@@ -1,0 +1,29 @@
+#!/usr/bin/env sh
+
+LOG_FILE=".husky/logs/husky-post-merge.$(date '+%Y-%m-%d').log"
+mkdir -p .husky/logs
+
+. "$(dirname "$0")/scripts/committag.sh"
+get_commit_and_tag
+
+{
+	echo "------------------------------"
+	echo "$(date '+%Y-%m-%d %H:%M:%S')"
+	echo "Hook        : post-merge"
+	echo "User        : $(git config user.name) <$(git config user.email)>"
+	echo "Last commit : $COMMIT_MSG"
+	echo "Cur. branch : $CURRENT_BRANCH"
+	echo "Last tag    : $LAST_TAG"
+	echo "------------------------------"
+} >>"$LOG_FILE"
+
+# Forces update the changelog version based on the source of truth content in .husky/GITFLOW_TAG_VERSION
+# VERSION=$(cat .husky/GITFLOW_TAG_VERSION 2>/dev/null || echo "")
+# sh .husky/scripts/update-changelog.sh "$VERSION" || true
+# git add CHANGELOG.md || true
+# git commit -m "docs: update changelog to $VERSION" --no-verify || true
+# git push -f || true
+
+# sh .husky/scripts/autosquash-finalize.sh >>"$LOG_FILE" 2>&1
+
+echo "END post-merge" >"$LOG_FILE"

@@ -1,0 +1,20 @@
+#!/usr/bin/env sh
+
+LOG_FILE=".husky/logs/husky-post-applypatch.$(date '+%Y-%m-%d').log"
+mkdir -p .husky/logs
+
+. "$(dirname "$0")/scripts/committag.sh"
+get_commit_and_tag
+
+{
+	echo "------------------------------"
+	echo "$(date '+%Y-%m-%d %H:%M:%S')"
+	echo "Hook        : post-applypatch"
+	echo "User        : $(git config user.name) <$(git config user.email)>"
+	echo "Last commit : $COMMIT_MSG"
+	echo "Cur. branch : $CURRENT_BRANCH"
+	echo "Last tag    : $LAST_TAG"
+	echo "------------------------------"
+} >>"$LOG_FILE"
+
+echo "END post-applypatch" >>"$LOG_FILE"

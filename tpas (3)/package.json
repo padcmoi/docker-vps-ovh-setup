@@ -1,0 +1,60 @@
+{
+  "name": "express-ts-mvc-starter",
+  "version": "1.0.1",
+  "private": true,
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "scripts": {
+    "dev": "pnpm build && tsx watch src/server.ts",
+    "build": "tsx scripts/generate-openapi.ts && tsc -p tsconfig.json",
+    "start": "pnpm build && node dist/server.js",
+    "pm2:start": "pnpm build && pm2 start ecosystem.config.cjs && pm2 save",
+    "pm2:stop": "pnpm build && pm2 delete ecosystem.config.cjs || true",
+    "pm2:monit": "pm2 monit ecosystem.config.cjs || true",
+    "lint": "eslint . --ext .ts",
+    "lint-fix": "eslint --fix . --ext .ts",
+    "format": "prettier --write src scripts public",
+    "prepare": "husky",
+    "git:log": "git log --oneline --decorate --graph --all",
+    "changelog": "sh .husky/scripts/update-changelog.sh"
+  },
+  "dependencies": {
+    "@eslint/js": "^9.39.1",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.1",
+    "mysql2": "^3.15.3",
+    "pg": "^8.16.3",
+    "pino": "^9.3.2",
+    "pino-http": "^10.3.0",
+    "swagger-ui-express": "^5.0.1",
+    "typescript-eslint": "^8.46.4",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@asteasolutions/zod-to-openapi": "^8.1.0",
+    "@commitlint/cli": "^20.1.0",
+    "@commitlint/config-conventional": "^20.0.0",
+    "@types/express": "^4.17.21",
+    "@types/glob": "^9.0.0",
+    "@types/node": "^22.7.6",
+    "@types/pg": "^8.15.6",
+    "@types/swagger-ui-express": "^4.1.8",
+    "@typescript-eslint/eslint-plugin": "^8.12.2",
+    "@typescript-eslint/parser": "^8.12.2",
+    "eslint": "^9.13.0",
+    "fast-glob": "^3.3.3",
+    "glob": "^11.0.3",
+    "husky": "^9.1.7",
+    "lint-staged": "^15.2.10",
+    "openapi3-ts": "^4.5.0",
+    "pino-pretty": "^13.1.2",
+    "pm2": "^5.4.2",
+    "prettier": "^3.6.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3"
+  },
+  "lint-staged": {
+    "*.{ts,js,json}": "eslint --fix"
+  }
+}

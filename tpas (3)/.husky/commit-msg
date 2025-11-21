@@ -1,0 +1,50 @@
+#!/usr/bin/env sh
+
+LOG_FILE=".husky/logs/husky-commit-msg.$(date '+%Y-%m-%d').log"
+mkdir -p .husky/logs
+
+CURRENT_MSG=$(cat "$1" 2>/dev/null)
+
+. "$(dirname "$0")/scripts/committag.sh"
+get_commit_and_tag
+
+{
+	echo "------------------------------"
+	echo "$(date '+%Y-%m-%d %H:%M:%S')"
+	echo "Hook        : commit-msg"
+	echo "User        : $(git config user.name) <$(git config user.email)>"
+	echo "Last commit : $COMMIT_MSG"
+	echo "Cur. branch : $CURRENT_BRANCH"
+	echo "Last tag    : $LAST_TAG"
+	echo "Message     : $CURRENT_MSG"
+	echo "------------------------------"
+} >>"$LOG_FILE"
+
+# Detect GitFlow finish (release or hotfix) → Merge tag 'X.Y.Z'
+if echo "$CURRENT_MSG" | grep -q "Merge tag '"; then
+	echo "GitFlow finish detected → pushing tags..." >>"$LOG_FILE"
+	git push --tags >/dev/null 2>&1 || true
+fi
+
+# If the commit affects CHANGELOG, always allow it to pass
+if git diff --cached --name-only | grep -q "CHANGELOG.md"; then
+	echo "END commit-msg (changelog bypass)" >>"$LOG_FILE"
+	exit 0
+fi
+
+# If the message contains release or hotfix → LET IT PASS
+if echo "$CURRENT_MSG" | grep -qiE "release|hotfix|changelog"; then
+	echo "END commit-msg (auto release/hotfix bypass)" >>"$LOG_FILE"
+	exit 0
+fi
+
+# Ignore commitlint for version bump commits
+if echo "$CURRENT_MSG" | grep -qE "^Version bump to [0-9]+\.[0-9]+\.[0-9]+$"; then
+	echo "[commit-msg] Skipping commitlint for version bump" >>"$LOG_FILE"
+	exit 0
+fi
+
+# Otherwise, run commitlint normally
+./node_modules/.bin/commitlint --edit "$1" || true
+
+echo "END commit-msg (normal)" >>"$LOG_FILE"

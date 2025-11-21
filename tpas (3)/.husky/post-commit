@@ -1,0 +1,51 @@
+#!/usr/bin/env sh
+
+LOG_FILE=".husky/logs/husky-post-commit.$(date '+%Y-%m-%d').log"
+mkdir -p .husky/logs
+
+. "$(dirname "$0")/scripts/committag.sh"
+get_commit_and_tag
+
+{
+	echo "------------------------------"
+	echo "$(date '+%Y-%m-%d %H:%M:%S')"
+	echo "Hook        : post-commit"
+	echo "User        : $(git config user.name) <$(git config user.email)>"
+	echo "Last commit : $COMMIT_MSG"
+	echo "Cur. branch : $CURRENT_BRANCH"
+	echo "Last tag    : $LAST_TAG"
+	echo "------------------------------"
+} >>"$LOG_FILE"
+
+# Create a single source of truth for TAG here to enforce this version in update-changelog later.
+# Forces update the changelog version based on the source of truth content in .husky/GITFLOW_TAG_VERSION
+# if echo "$COMMIT_MSG" | grep -q "Version bump to"; then
+# 	TYPE=""
+# 	VERSION=$(echo "$COMMIT_MSG" | sed -n "s/Version bump to //p")
+# 	GITFLOW_START_HASH=$(git rev-parse HEAD)
+#
+# # Detect if it's a release or a hotfix
+# BRANCH=$(git rev-parse --abbrev-ref HEAD)
+#
+# if echo "$BRANCH" | grep -q "main"; then
+# 	TYPE="release"
+# elif echo "$BRANCH" | grep -q "hotfix"; then
+# 	TYPE="hotfix"
+# fi
+#
+# echo "$VERSION" >.husky/GITFLOW_TAG_VERSION
+# echo "$GITFLOW_START_HASH" >.husky/GITFLOW_START_HASH
+#
+# git add .husky/GITFLOW_TAG_VERSION
+# git add .husky/GITFLOW_START_HASH
+#
+# sh .husky/scripts/update-changelog.sh || true
+# git add CHANGELOG.md || true
+#
+# git commit -m "chore: persist metadata v$VERSION" --no-verify || true
+#
+# git push -f || true
+#
+# fi
+
+echo "END post-commit" >>"$LOG_FILE"

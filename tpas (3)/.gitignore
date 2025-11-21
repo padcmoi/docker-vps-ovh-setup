@@ -1,0 +1,12 @@
+node_modules
+pnpm-lock.yaml
+dist/
+
+.env*
+!.env.sample
+
+.trash
+
+openapi*.json
+
+.husky/logs
