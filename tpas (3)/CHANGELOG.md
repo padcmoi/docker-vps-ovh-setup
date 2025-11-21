@@ -2,6 +2,36 @@
 
 This file lists the changes by version.
 
+## [Unreleased]
+
+### Add
+
+- dssdds
+- full automation from local machine to configured OVH VPS
+- add debian12 docker setup
+
+### Change
+
+- execution vps script
+
+### Remove
+
+-
+
+## 1.0.0
+
+### Add
+
+- add automated VPS setup system with dynamic template management
+
+### Change
+
+-
+
+### Remove
+
+-
+
 ## 1.0.1
 
 ### Add
@@ -15,17 +45,3 @@ This file lists the changes by version.
 ### Remove
 
 -
-
-## 1.0.0
-
-### Add
-
--
-
-### Change
-
--
-
-### Remove
-
-- old values
