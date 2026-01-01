@@ -279,7 +279,8 @@ install_common_packages() {
 	print_step "Installation des paquets de base"
 
 	apt update
-	apt install -y wget apt-transport-https software-properties-common curl
+	apt install -y wget apt-transport-https software-properties-common curl cron
+	systemctl enable --now cron
 
 	print_success "Paquets de base installés"
 }
@@ -360,6 +361,8 @@ install_nginx_stack() {
 	print_step "Installation de Nginx + Certbot + whiptail"
 
 	apt install -y nginx certbot python3-certbot-nginx whiptail
+	rm -f /etc/cron.d/certbot || true
+	echo '0 2 * * * root certbot renew -q --preferred-challenges http --standalone --pre-hook "systemctl stop nginx || systemctl stop apache2" --post-hook "systemctl start nginx || systemctl start apache2"' >/etc/cron.d/certbot-standalone
 
 	print_step "Configuration de Nginx..."
 
