@@ -339,6 +339,15 @@ install_common_packages() {
 	print_success "Paquets de base installés"
 }
 
+ensure_var_docker_directory() {
+	print_step "Création du dossier /var/docker"
+
+	mkdir -p /var/docker
+	chmod 777 /var/docker
+
+	print_success "Dossier /var/docker prêt"
+}
+
 install_webmin() {
 	print_step "Installation de Webmin"
 
@@ -542,6 +551,7 @@ main() {
 
 	# Installation dans le même ordre que l'ancien script
 	install_common_packages
+	ensure_var_docker_directory
 	install_webmin
 	cleanup_services # Avant SSH pour éviter les conflits
 	configure_ssh
