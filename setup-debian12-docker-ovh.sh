@@ -58,6 +58,10 @@ print_step() {
 	echo -e "\n${BLUE}[ÉTAPE]${NC} $1"
 }
 
+print_header() {
+	echo -e "\n${CYAN}--- $1 ---${NC}"
+}
+
 print_info() {
 	echo -e "${CYAN}ℹ️  $1${NC}"
 }
