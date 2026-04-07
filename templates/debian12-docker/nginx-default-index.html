@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Serveur VPS Opérationnel</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(135deg, #5b75df, #6d5fca);
+      font-family: "Segoe UI", Arial, sans-serif;
+      color: #1f2937;
+    }
+    .card {
+      width: min(92vw, 760px);
+      background: #f3f4f6;
+      border-radius: 14px;
+      box-shadow: 0 18px 40px rgba(30, 41, 59, 0.28);
+      padding: 34px 34px 28px;
+      text-align: center;
+    }
+    h1 {
+      margin: 8px 0 10px;
+      font-size: clamp(30px, 4vw, 50px);
+      line-height: 1.1;
+    }
+    .sub {
+      margin: 0 0 20px;
+      color: #4b5563;
+      font-size: clamp(16px, 2.2vw, 34px);
+    }
+    .ok {
+      margin: 0 auto 18px;
+      padding: 12px;
+      max-width: 640px;
+      border-radius: 10px;
+      border: 1px solid #9bd5a9;
+      background: #d8efde;
+      color: #19693a;
+      font-size: clamp(17px, 2.2vw, 31px);
+      font-weight: 600;
+    }
+    .proto {
+      margin: 0 auto 18px;
+      padding: 12px;
+      max-width: 640px;
+      border-radius: 10px;
+      border: 1px solid #cbd5e1;
+      background: #eff6ff;
+      color: #1e3a8a;
+      font-size: clamp(15px, 2vw, 28px);
+      font-weight: 600;
+    }
+    .proto.is-https {
+      border-color: #86efac;
+      background: #dcfce7;
+      color: #166534;
+    }
+    .proto.is-http {
+      border-color: #facc15;
+      background: #fef9c3;
+      color: #854d0e;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin: 18px 0 20px;
+    }
+    .box {
+      background: #e8ebf0;
+      border-left: 4px solid #6f8ef7;
+      border-radius: 10px;
+      padding: 12px;
+      min-height: 132px;
+    }
+    .box h2 {
+      margin: 0 0 8px;
+      font-size: clamp(20px, 2.7vw, 42px);
+      line-height: 1.12;
+    }
+    .box p {
+      margin: 0;
+      color: #4b5563;
+      font-size: clamp(14px, 1.8vw, 30px);
+    }
+    .next-title {
+      margin: 6px 0 10px;
+      font-size: clamp(22px, 2.8vw, 44px);
+      font-weight: 700;
+      color: #4b5563;
+    }
+    .next {
+      margin: 0;
+      font-size: clamp(16px, 2.1vw, 32px);
+      color: #4b5563;
+    }
+    .muted {
+      margin-top: 8px;
+      color: #6b7280;
+      font-size: clamp(14px, 1.7vw, 28px);
+    }
+    @media (max-width: 720px) {
+      .card { padding: 24px 18px; }
+      .grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <div style="font-size: clamp(30px, 4vw, 62px);">🚀</div>
+    <h1>Serveur VPS Opérationnel</h1>
+    <p class="sub">Serveur Docker - Configuration automatique OVH</p>
+
+    <p class="ok">✅ Votre serveur est correctement configuré et sécurisé !</p>
+    <p id="protocol-status" class="proto">Détection du protocole en cours...</p>
+
+    <section class="grid">
+      <article class="box">
+        <h2>🔧 Webmin</h2>
+        <p>Interface d'administration système</p>
+      </article>
+      <article class="box">
+        <h2>🐳 Portainer<br>Community Edition (CE)</h2>
+        <p>Gestion des conteneurs Docker</p>
+      </article>
+      <article class="box">
+        <h2>🌐 Nginx</h2>
+        <p>Serveur web avec SSL automatique</p>
+      </article>
+      <article class="box">
+        <h2>🛡️ Fail2ban</h2>
+        <p>Protection SSH anti-bots</p>
+      </article>
+    </section>
+
+    <p class="next-title">Prochaines étapes :</p>
+    <p class="next">Utilisez <code>vhost-manager.sh</code> pour configurer vos domaines</p>
+    <p class="muted">Cette page disparaîtra dès que vous ajouterez votre premier domaine</p>
+  </main>
+  <script>
+    (function () {
+      var el = document.getElementById('protocol-status');
+      if (!el) return;
+
+      if (window.location.protocol === 'https:') {
+        el.classList.add('is-https');
+        el.textContent = 'Connexion HTTPS active: accès sécurisé OK.';
+      } else {
+        el.classList.add('is-http');
+        el.textContent = 'Connexion HTTP active: non chiffrée. Utilisez HTTPS si possible.';
+      }
+    })();
+  </script>
+</body>
+</html>

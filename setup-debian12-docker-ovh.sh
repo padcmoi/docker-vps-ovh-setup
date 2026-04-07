@@ -423,7 +423,7 @@ install_fail2ban() {
 install_nginx_stack() {
 	print_step "Installation de Nginx + Certbot + whiptail"
 
-	apt install -y nginx certbot python3-certbot-nginx whiptail
+	apt install -y nginx certbot python3-certbot-nginx whiptail ssl-cert
 	rm -f /etc/cron.d/certbot || true
 	echo '0 2 * * * root certbot renew -q --preferred-challenges http --standalone --pre-hook "systemctl stop nginx || systemctl stop apache2" --post-hook "systemctl start nginx || systemctl start apache2"' >/etc/cron.d/certbot-standalone
 
@@ -437,6 +437,19 @@ install_nginx_stack() {
 
 	# Configuration nginx par défaut
 	cp "$TEMPLATES_DIR/nginx-default.conf" /etc/nginx/sites-available/default
+
+	# Déployer la page d'accueil par défaut du VPS (IP serveur)
+	if [[ -f "$TEMPLATES_DIR/nginx-default-index.html" ]]; then
+		mkdir -p /var/www/html
+		cp "$TEMPLATES_DIR/nginx-default-index.html" /var/www/html/index.html
+	else
+		print_warning "Template nginx-default-index.html introuvable, page par défaut non mise à jour"
+	fi
+
+	# Assurer un certificat local pour le default_server HTTPS
+	if [[ ! -f /etc/ssl/certs/ssl-cert-snakeoil.pem ]] || [[ ! -f /etc/ssl/private/ssl-cert-snakeoil.key ]]; then
+		make-ssl-cert generate-default-snakeoil --force-overwrite >/dev/null 2>&1 || true
+	fi
 
 	# Test de la configuration nginx
 	if ! nginx -t; then
