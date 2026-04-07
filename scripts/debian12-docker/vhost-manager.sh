@@ -61,12 +61,29 @@ load_letsencrypt_email() {
   echo "$email"
 }
 
+cert_covers_domain() {
+  local cert_file="$1"
+  local domain="$2"
+
+  [ -f "$cert_file" ] || return 1
+
+  openssl x509 -in "$cert_file" -noout -ext subjectAltName 2>/dev/null \
+    | tr -d ' ' \
+    | grep -q "DNS:$domain"
+}
+
 add_or_update_vhost() {
   local pre_domain="$1"
   local pre_target="$2"
 
   DOMAIN=$(prompt_input "Nom de domaine (ex: example.com):" "$pre_domain")
   TARGET=$(prompt_input "Backend (ex: http://127.0.0.1:8888):" "$pre_target")
+  DOMAIN="${DOMAIN,,}"
+
+  if ! [[ "$DOMAIN" =~ ^[a-z0-9.-]+$ ]] || [[ "$DOMAIN" != *.* ]]; then
+    whiptail --msgbox "Nom de domaine invalide: $DOMAIN" 8 70
+    return 1
+  fi
 
   SSL_CHOICE=$(whiptail --title "Mode SSL" --menu "Choisir mode HTTPS" 15 60 4 \
     "1" "Let's Encrypt certonly" \
@@ -78,17 +95,24 @@ add_or_update_vhost() {
 
   if [ "$SSL_CHOICE" = "1" ]; then
     # Si un certificat existe déjà pour ce domaine, on le réutilise.
-    if [ -f "/etc/letsencrypt/live/$DOMAIN/fullchain.pem" ] && [ -f "/etc/letsencrypt/live/$DOMAIN/privkey.pem" ]; then
+    if [ -f "/etc/letsencrypt/live/$DOMAIN/fullchain.pem" ] \
+      && [ -f "/etc/letsencrypt/live/$DOMAIN/privkey.pem" ] \
+      && cert_covers_domain "/etc/letsencrypt/live/$DOMAIN/fullchain.pem" "$DOMAIN"; then
       CERT_PATH="/etc/letsencrypt/live/$DOMAIN/fullchain.pem"
       KEY_PATH="/etc/letsencrypt/live/$DOMAIN/privkey.pem"
       whiptail --msgbox "Certificat Let's Encrypt existant détecté pour $DOMAIN.\nRéutilisation du certificat actuel." 10 78
     else
+      if [ -f "/etc/letsencrypt/live/$DOMAIN/fullchain.pem" ] && ! cert_covers_domain "/etc/letsencrypt/live/$DOMAIN/fullchain.pem" "$DOMAIN"; then
+        whiptail --msgbox "Le certificat existant ne couvre pas $DOMAIN.\nRéémission d'un certificat correct..." 10 78
+      fi
+
       EMAIL=$(load_letsencrypt_email)
       CERTBOT_ARGS=(
         certonly
         --standalone
         --agree-tos
         --non-interactive
+        --force-renewal
         --cert-name "$DOMAIN"
         -d "$DOMAIN"
       )
@@ -121,7 +145,8 @@ add_or_update_vhost() {
   fi
 
   FORCE_REDIRECT="no"
-  confirm_yesno "Forcer HTTP -> HTTPS ?" && FORCE_REDIRECT="yes"
+  FORCE_REDIRECT="yes"
+  confirm_yesno "Forcer HTTP -> HTTPS ?" || FORCE_REDIRECT="no"
 
   CONF="$SITES_AVAILABLE/$DOMAIN"
 
@@ -133,10 +158,15 @@ server {
     server_name $DOMAIN www.$DOMAIN;
     location / {
         proxy_pass $TARGET;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection "upgrade";
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_set_header X-Forwarded-Host \$host;
+        proxy_set_header X-Forwarded-Port \$server_port;
     }
 }
 EOF
@@ -156,10 +186,15 @@ server {
     ssl_certificate_key $KEY_PATH;
     location / {
         proxy_pass $TARGET;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection "upgrade";
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_set_header X-Forwarded-Host \$host;
+        proxy_set_header X-Forwarded-Port 443;
     }
 }
 EOF
@@ -170,10 +205,15 @@ server {
     server_name $DOMAIN www.$DOMAIN;
     location / {
         proxy_pass $TARGET;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection "upgrade";
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_set_header X-Forwarded-Host \$host;
+        proxy_set_header X-Forwarded-Port \$server_port;
     }
 }
 
@@ -184,10 +224,15 @@ server {
     ssl_certificate_key $KEY_PATH;
     location / {
         proxy_pass $TARGET;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection "upgrade";
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_set_header X-Forwarded-Host \$host;
+        proxy_set_header X-Forwarded-Port 443;
     }
 }
 EOF

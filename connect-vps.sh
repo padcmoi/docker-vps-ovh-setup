@@ -5,6 +5,8 @@
 
 set -e
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 echo "🚀 Configuration automatique de connexion VPS"
 echo "=============================================="
 
@@ -113,36 +115,26 @@ while true; do
 		echo "🔄 Installation automatique en cours..."
 		echo "=============================================="
 
+		# Vérifier les fichiers locaux requis
+		if [ ! -f "$SCRIPT_DIR/setup-debian12-docker-ovh.sh" ] || [ ! -f "$SCRIPT_DIR/templates/debian12-docker/nginx-default.conf" ] || [ ! -f "$SCRIPT_DIR/templates/debian12-docker/nginx-default-index.html" ] || [ ! -f "$SCRIPT_DIR/scripts/debian12-docker/vhost-manager.sh" ]; then
+			echo "❌ Erreur : fichiers locaux manquants dans $SCRIPT_DIR"
+			echo "Lancez ce script depuis le dossier du projet docker-vps-ovh-setup."
+			exit 1
+		fi
+
+		echo "📦 Envoi des fichiers locaux vers le VPS..."
+		ssh -p $VPS_PORT $VPS_USER@$VPS_IP "mkdir -p ~/docker-vps-ovh-setup/templates ~/docker-vps-ovh-setup/scripts"
+		scp -P $VPS_PORT "$SCRIPT_DIR/setup-debian12-docker-ovh.sh" $VPS_USER@$VPS_IP:~/docker-vps-ovh-setup/
+		scp -P $VPS_PORT -r "$SCRIPT_DIR/templates/debian12-docker" $VPS_USER@$VPS_IP:~/docker-vps-ovh-setup/templates/
+		scp -P $VPS_PORT -r "$SCRIPT_DIR/scripts/debian12-docker" $VPS_USER@$VPS_IP:~/docker-vps-ovh-setup/scripts/
+
 		# Exécution du script d'installation sur le VPS
 		if ssh -tt -p $VPS_PORT $VPS_USER@$VPS_IP "
-                echo '🌐 Téléchargement des fichiers d'\''installation...'
-                
-                # Créer la structure de dossiers
-                mkdir -p templates/debian12-docker
-                mkdir -p scripts/debian12-docker
-                
-                # Télécharger le script principal
-                wget -q https://raw.githubusercontent.com/padcmoi/docker-vps-ovh-setup/main/setup-debian12-docker-ovh.sh
-                
-                # Télécharger les templates
-                wget -q -O templates/debian12-docker/miniserv.conf https://raw.githubusercontent.com/padcmoi/docker-vps-ovh-setup/main/templates/debian12-docker/miniserv.conf
-                wget -q -O templates/debian12-docker/nginx-default.conf https://raw.githubusercontent.com/padcmoi/docker-vps-ovh-setup/main/templates/debian12-docker/nginx-default.conf
-                wget -q -O templates/debian12-docker/nginx-default-index.html https://raw.githubusercontent.com/padcmoi/docker-vps-ovh-setup/main/templates/debian12-docker/nginx-default-index.html
-                wget -q -O templates/debian12-docker/fail2ban-jail.local https://raw.githubusercontent.com/padcmoi/docker-vps-ovh-setup/main/templates/debian12-docker/fail2ban-jail.local
-                wget -q -O templates/debian12-docker/config.sample https://raw.githubusercontent.com/padcmoi/docker-vps-ovh-setup/main/templates/debian12-docker/config.sample
-                
-                # Télécharger les scripts
-                wget -q -O scripts/debian12-docker/vhost-manager.sh https://raw.githubusercontent.com/padcmoi/docker-vps-ovh-setup/main/scripts/debian12-docker/vhost-manager.sh
-                
-                # Vérifier que tout est téléchargé
-                if [ ! -f setup-debian12-docker-ovh.sh ] || [ ! -f templates/debian12-docker/miniserv.conf ] || [ ! -f templates/debian12-docker/nginx-default-index.html ] || [ ! -f scripts/debian12-docker/vhost-manager.sh ]; then
-                    echo '❌ Erreur : Impossible de télécharger tous les fichiers nécessaires'
-                    exit 1
-                fi
-                
+                set -e
+                cd ~/docker-vps-ovh-setup
                 chmod +x setup-debian12-docker-ovh.sh
                 chmod +x scripts/debian12-docker/vhost-manager.sh
-                echo '✅ Tous les fichiers téléchargés avec succès'
+                echo '✅ Fichiers locaux copiés avec succès'
                 echo ''
                 echo '🚀 Lancement de l'\''installation automatique...'
                 echo '=============================================='
