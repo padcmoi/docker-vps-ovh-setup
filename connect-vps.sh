@@ -127,6 +127,7 @@ while true; do
                 # Télécharger les templates
                 wget -q -O templates/debian12-docker/miniserv.conf https://raw.githubusercontent.com/padcmoi/docker-vps-ovh-setup/main/templates/debian12-docker/miniserv.conf
                 wget -q -O templates/debian12-docker/nginx-default.conf https://raw.githubusercontent.com/padcmoi/docker-vps-ovh-setup/main/templates/debian12-docker/nginx-default.conf
+                wget -q -O templates/debian12-docker/nginx-default-index.html https://raw.githubusercontent.com/padcmoi/docker-vps-ovh-setup/main/templates/debian12-docker/nginx-default-index.html
                 wget -q -O templates/debian12-docker/fail2ban-jail.local https://raw.githubusercontent.com/padcmoi/docker-vps-ovh-setup/main/templates/debian12-docker/fail2ban-jail.local
                 wget -q -O templates/debian12-docker/config.sample https://raw.githubusercontent.com/padcmoi/docker-vps-ovh-setup/main/templates/debian12-docker/config.sample
                 
@@ -134,7 +135,7 @@ while true; do
                 wget -q -O scripts/debian12-docker/vhost-manager.sh https://raw.githubusercontent.com/padcmoi/docker-vps-ovh-setup/main/scripts/debian12-docker/vhost-manager.sh
                 
                 # Vérifier que tout est téléchargé
-                if [ ! -f setup-debian12-docker-ovh.sh ] || [ ! -f templates/debian12-docker/miniserv.conf ] || [ ! -f scripts/debian12-docker/vhost-manager.sh ]; then
+                if [ ! -f setup-debian12-docker-ovh.sh ] || [ ! -f templates/debian12-docker/miniserv.conf ] || [ ! -f templates/debian12-docker/nginx-default-index.html ] || [ ! -f scripts/debian12-docker/vhost-manager.sh ]; then
                     echo '❌ Erreur : Impossible de télécharger tous les fichiers nécessaires'
                     exit 1
                 fi
@@ -172,6 +173,8 @@ while true; do
 		echo "   wget https://raw.githubusercontent.com/padcmoi/docker-vps-ovh-setup/main/setup-debian12-docker-ovh.sh"
 		echo "   mkdir -p templates/debian12-docker scripts/debian12-docker"
 		echo "   wget -O templates/debian12-docker/miniserv.conf https://raw.githubusercontent.com/padcmoi/docker-vps-ovh-setup/main/templates/debian12-docker/miniserv.conf"
+		echo "   wget -O templates/debian12-docker/nginx-default.conf https://raw.githubusercontent.com/padcmoi/docker-vps-ovh-setup/main/templates/debian12-docker/nginx-default.conf"
+		echo "   wget -O templates/debian12-docker/nginx-default-index.html https://raw.githubusercontent.com/padcmoi/docker-vps-ovh-setup/main/templates/debian12-docker/nginx-default-index.html"
 		echo "   wget -O scripts/debian12-docker/vhost-manager.sh https://raw.githubusercontent.com/padcmoi/docker-vps-ovh-setup/main/scripts/debian12-docker/vhost-manager.sh"
 		echo "   chmod +x setup-debian12-docker-ovh.sh scripts/debian12-docker/vhost-manager.sh"
 		echo "   sudo ./setup-debian12-docker-ovh.sh"
