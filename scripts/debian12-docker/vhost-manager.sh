@@ -4,6 +4,7 @@ set -euo pipefail
 
 SITES_AVAILABLE="/etc/nginx/sites-available"
 SITES_ENABLED="/etc/nginx/sites-enabled"
+VHOST_MANAGER_ENV_FILE="/etc/vhost-manager.env"
 
 ensure_root() {
   if [ "$(id -u)" -ne 0 ]; then
@@ -40,6 +41,26 @@ confirm_yesno() {
   whiptail --yesno "$1" 8 60
 }
 
+confirm_yesno_default_no() {
+  whiptail --defaultno --yesno "$1" 8 70
+}
+
+load_letsencrypt_email() {
+  local email="${LETSENCRYPT_EMAIL:-}"
+
+  if [ -z "$email" ] && [ -f "$VHOST_MANAGER_ENV_FILE" ]; then
+    # shellcheck disable=SC1090
+    . "$VHOST_MANAGER_ENV_FILE"
+    email="${LETSENCRYPT_EMAIL:-}"
+  fi
+
+  if [ -z "$email" ]; then
+    email=$(grep -Rho 'mailto:[^"]*' /etc/letsencrypt/accounts 2>/dev/null | head -n 1 | sed 's/^mailto://' || true)
+  fi
+
+  echo "$email"
+}
+
 add_or_update_vhost() {
   local pre_domain="$1"
   local pre_target="$2"
@@ -56,12 +77,44 @@ add_or_update_vhost() {
   KEY_PATH=""
 
   if [ "$SSL_CHOICE" = "1" ]; then
-    EMAIL=$(prompt_input "Email pour Let's Encrypt:" "")
-    systemctl stop nginx || true
-    certbot certonly --standalone --agree-tos --non-interactive -m "$EMAIL" -d "$DOMAIN" -d "www.$DOMAIN"
-    systemctl start nginx
-    CERT_PATH="/etc/letsencrypt/live/$DOMAIN/fullchain.pem"
-    KEY_PATH="/etc/letsencrypt/live/$DOMAIN/privkey.pem"
+    # Si un certificat existe déjà pour ce domaine, on le réutilise.
+    if [ -f "/etc/letsencrypt/live/$DOMAIN/fullchain.pem" ] && [ -f "/etc/letsencrypt/live/$DOMAIN/privkey.pem" ]; then
+      CERT_PATH="/etc/letsencrypt/live/$DOMAIN/fullchain.pem"
+      KEY_PATH="/etc/letsencrypt/live/$DOMAIN/privkey.pem"
+      whiptail --msgbox "Certificat Let's Encrypt existant détecté pour $DOMAIN.\nRéutilisation du certificat actuel." 10 78
+    else
+      EMAIL=$(load_letsencrypt_email)
+      CERTBOT_ARGS=(
+        certonly
+        --standalone
+        --agree-tos
+        --non-interactive
+        --cert-name "$DOMAIN"
+        -d "$DOMAIN"
+      )
+
+      # Sur les sous-domaines, www.<sous-domaine> n'existe souvent pas.
+      if [[ "$DOMAIN" != www.* ]] && confirm_yesno_default_no "Inclure aussi www.$DOMAIN dans le certificat ?"; then
+        CERTBOT_ARGS+=(--expand -d "www.$DOMAIN")
+      fi
+
+      if [ -n "$EMAIL" ]; then
+        CERTBOT_ARGS+=(-m "$EMAIL")
+      else
+        CERTBOT_ARGS+=(--register-unsafely-without-email)
+      fi
+
+      systemctl stop nginx || true
+      if ! CERTBOT_OUTPUT=$(certbot "${CERTBOT_ARGS[@]}" 2>&1); then
+        systemctl start nginx || true
+        LAST_ERROR=$(printf '%s\n' "$CERTBOT_OUTPUT" | tail -n 12)
+        whiptail --msgbox "Erreur Certbot:\n\n$LAST_ERROR\n\nLog complet: /var/log/letsencrypt/letsencrypt.log" 22 100
+        return 1
+      fi
+      systemctl start nginx
+      CERT_PATH="/etc/letsencrypt/live/$DOMAIN/fullchain.pem"
+      KEY_PATH="/etc/letsencrypt/live/$DOMAIN/privkey.pem"
+    fi
   elif [ "$SSL_CHOICE" = "2" ]; then
     CERT_PATH=$(prompt_input "Chemin fullchain.pem:" "")
     KEY_PATH=$(prompt_input "Chemin privkey.pem:" "")
