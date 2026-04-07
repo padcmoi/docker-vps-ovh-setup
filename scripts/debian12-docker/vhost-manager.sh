@@ -13,7 +13,7 @@ ensure_root() {
 }
 
 list_vhosts_raw() {
-  for f in "$SITES_AVAILABLE"/* 2>/dev/null; do
+  for f in "$SITES_AVAILABLE"/*; do
     [ -f "$f" ] || continue
     name=$(basename "$f")
     status="DISABLED"
