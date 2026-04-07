@@ -32,6 +32,21 @@ NC='\033[0m'
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TEMPLATES_DIR="${SCRIPT_DIR}/templates/debian12-docker"
 SCRIPTS_DIR="${SCRIPT_DIR}/scripts/debian12-docker"
+AUTO_MODE=false
+
+# Gestion des arguments
+for arg in "$@"; do
+	case "$arg" in
+	--auto|--non-interactive)
+		AUTO_MODE=true
+		;;
+	-h|--help)
+		echo "Usage: $0 [--auto]"
+		echo "  --auto, --non-interactive   Exécute l'installation avec les valeurs par défaut"
+		exit 0
+		;;
+	esac
+done
 
 # =============================================================================
 # FONCTIONS UTILITAIRES
@@ -93,6 +108,16 @@ ask_yes_no() {
 	local question="$1"
 	local default="${2:-n}"
 
+	if [[ "$AUTO_MODE" == true || ! -t 0 ]]; then
+		if [[ $default == "y" ]]; then
+			print_info "$question [Y/n] -> oui (mode non interactif)"
+			return 0
+		else
+			print_info "$question [y/N] -> non (mode non interactif)"
+			return 1
+		fi
+	fi
+
 	while true; do
 		if [[ $default == "y" ]]; then
 			read -p "$question [Y/n]: " yn
@@ -107,6 +132,38 @@ ask_yes_no() {
 		*) echo "Veuillez répondre oui ou non." ;;
 		esac
 	done
+}
+
+prompt_with_default() {
+	local prompt="$1"
+	local default="$2"
+	local value
+
+	read -r -p "$prompt [$default]: " value
+	echo "${value:-$default}"
+}
+
+apply_default_config() {
+	print_step "Configuration automatique (mode non interactif)"
+
+	SSH_PORT="${SSH_PORT:-22}"
+	WEBMIN_PORT="${WEBMIN_PORT:-10000}"
+	PORTAINER_PORT="${PORTAINER_PORT:-9000}"
+	SSH_ALLOWED_USERS="${SSH_ALLOWED_USERS:-root debian}"
+	FAIL2BAN_MAXRETRY="${FAIL2BAN_MAXRETRY:-5}"
+	FAIL2BAN_BANTIME="${FAIL2BAN_BANTIME:-3600}"
+	INSTALL_PORTAINER="${INSTALL_PORTAINER:-true}"
+	REMOVE_EXIM4="${REMOVE_EXIM4:-true}"
+	INSTALL_SSH_KEY=false
+
+	echo "• SSH Port: $SSH_PORT (utilisateurs: $SSH_ALLOWED_USERS)"
+	echo "• Webmin Port: $WEBMIN_PORT"
+	if [[ $INSTALL_PORTAINER == true ]]; then
+		echo "• Portainer Port: $PORTAINER_PORT"
+	else
+		echo "• Portainer: désactivé"
+	fi
+	echo "• Fail2ban: $FAIL2BAN_MAXRETRY tentatives max, ban ${FAIL2BAN_BANTIME}s"
 }
 
 # =============================================================================
@@ -124,8 +181,7 @@ interactive_config() {
 
 	# Port SSH
 	while true; do
-		read -e -p "Port SSH : " -i "22" SSH_PORT_INPUT
-		SSH_PORT=${SSH_PORT_INPUT:-22}
+		SSH_PORT=$(prompt_with_default "Port SSH" "22")
 		if validate_port "$SSH_PORT"; then
 			break
 		else
@@ -135,8 +191,7 @@ interactive_config() {
 
 	# Port Webmin
 	while true; do
-		read -e -p "Port Webmin : " -i "10000" WEBMIN_PORT_INPUT
-		WEBMIN_PORT=${WEBMIN_PORT_INPUT:-10000}
+		WEBMIN_PORT=$(prompt_with_default "Port Webmin" "10000")
 		if validate_port "$WEBMIN_PORT" && [ "$WEBMIN_PORT" != "$SSH_PORT" ]; then
 			break
 		else
@@ -146,8 +201,7 @@ interactive_config() {
 
 	# Port Portainer
 	while true; do
-		read -e -p "Port Portainer : " -i "9000" PORTAINER_PORT_INPUT
-		PORTAINER_PORT=${PORTAINER_PORT_INPUT:-9000}
+		PORTAINER_PORT=$(prompt_with_default "Port Portainer" "9000")
 		if validate_port "$PORTAINER_PORT" && [ "$PORTAINER_PORT" != "$SSH_PORT" ] && [ "$PORTAINER_PORT" != "$WEBMIN_PORT" ]; then
 			break
 		else
@@ -158,17 +212,14 @@ interactive_config() {
 	# Utilisateurs SSH autorisés
 	echo ""
 	print_info "Sécurité SSH - Utilisateurs autorisés"
-	read -e -p "Utilisateurs SSH autorisés : " -i "root debian" SSH_USERS_INPUT
-	SSH_ALLOWED_USERS=${SSH_USERS_INPUT:-"root debian"}
+	SSH_ALLOWED_USERS=$(prompt_with_default "Utilisateurs SSH autorisés" "root debian")
 
 	# Configuration Fail2ban
 	echo ""
 	print_info "Protection Fail2ban (anti-bots SSH)"
-	read -e -p "Nombre max tentatives connexion : " -i "5" FAIL2BAN_MAXRETRY
-	FAIL2BAN_MAXRETRY=${FAIL2BAN_MAXRETRY:-5}
+	FAIL2BAN_MAXRETRY=$(prompt_with_default "Nombre max tentatives connexion" "5")
 
-	read -e -p "Durée de ban en secondes : " -i "3600" FAIL2BAN_BANTIME
-	FAIL2BAN_BANTIME=${FAIL2BAN_BANTIME:-3600}
+	FAIL2BAN_BANTIME=$(prompt_with_default "Durée de ban en secondes" "3600")
 
 	# Services optionnels
 	echo ""
@@ -190,8 +241,7 @@ interactive_config() {
 	echo ""
 	print_info "Configuration des clés SSH (optionnel)"
 	if ask_yes_no "Voulez-vous ajouter une clé SSH publique pour l'authentification sans mot de passe ?" "n"; then
-		read -e -p "Chemin vers votre clé publique : " -i "~/.ssh/id_rsa.pub" SSH_KEY_PATH
-		SSH_KEY_PATH=${SSH_KEY_PATH:-"~/.ssh/id_rsa.pub"}
+		SSH_KEY_PATH=$(prompt_with_default "Chemin vers votre clé publique" "~/.ssh/id_rsa.pub")
 
 		if [[ -f "$SSH_KEY_PATH" ]]; then
 			SSH_KEY_CONTENT=$(cat "$SSH_KEY_PATH")
@@ -484,7 +534,11 @@ main() {
 	check_prerequisites
 
 	# Configuration interactive
-	interactive_config
+	if [[ "$AUTO_MODE" == true || ! -t 0 ]]; then
+		apply_default_config
+	else
+		interactive_config
+	fi
 
 	# Installation dans le même ordre que l'ancien script
 	install_common_packages

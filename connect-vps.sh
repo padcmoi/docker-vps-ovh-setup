@@ -114,7 +114,7 @@ while true; do
 		echo "=============================================="
 
 		# Exécution du script d'installation sur le VPS
-		if ssh -p $VPS_PORT $VPS_USER@$VPS_IP "
+		if ssh -tt -p $VPS_PORT $VPS_USER@$VPS_IP "
                 echo '🌐 Téléchargement des fichiers d'\''installation...'
                 
                 # Créer la structure de dossiers
