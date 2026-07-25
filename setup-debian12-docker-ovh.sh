@@ -538,11 +538,17 @@ install_management_scripts() {
 
 	# Copier les scripts de gestion spécifiques à Debian 12 + Docker
 	cp "$SCRIPTS_DIR/vhost-manager.sh" /usr/local/bin/vhost-manager.sh
+	cp "$SCRIPTS_DIR/changelog-rebuild" /usr/local/bin/changelog-rebuild
+	cp "$SCRIPTS_DIR/changelog-rebuild-semver" /usr/local/bin/changelog-rebuild-semver
 
 	chmod +x /usr/local/bin/vhost-manager.sh
+	chmod +x /usr/local/bin/changelog-rebuild
+	chmod +x /usr/local/bin/changelog-rebuild-semver
 
 	print_success "Scripts de gestion vhost Debian 12 installés"
 	print_info "• vhost-manager.sh - Interface TUI complète"
+	print_info "• changelog-rebuild - Régénère un CHANGELOG groupé par tag"
+	print_info "• changelog-rebuild-semver - Régénère un CHANGELOG Keep a Changelog"
 }
 
 # =============================================================================
