@@ -20,14 +20,15 @@ list_vhosts_raw() {
 		name=$(basename "$f")
 		status="DISABLED"
 		[ -L "$SITES_ENABLED/$name" ] && status="ENABLED"
-		echo "$name|$status"
+		port=$(grep -oP 'proxy_pass\s+\S*:\K[0-9]+' "$f" 2>/dev/null | head -n1)
+		echo "$name|$status|${port:-—}"
 	done
 }
 
 list_vhosts_menu() {
 	local menu_items=()
-	while IFS='|' read -r name status; do
-		menu_items+=("$name" "$status")
+	while IFS='|' read -r name status port; do
+		menu_items+=("$name" "$status  :$port")
 	done < <(list_vhosts_raw)
 	[ ${#menu_items[@]} -eq 0 ] && {
 		whiptail --msgbox "Aucun vhost trouvé" 8 50
@@ -37,8 +38,15 @@ list_vhosts_menu() {
 }
 
 prompt_input() {
-	local prompt="$1" default="$2"
-	whiptail --inputbox "$prompt" 10 70 "$default" 3>&1 1>&2 2>&3
+	local prompt="$1" default="$2" height="${3:-10}" width="${4:-70}"
+	whiptail --inputbox "$prompt" "$height" "$width" "$default" 3>&1 1>&2 2>&3
+}
+
+# Comma-separated, numerically sorted list of the backend ports already used
+# across every vhost. Shown when adding a vhost to help pick a free port.
+used_ports() {
+	grep -rhoP 'proxy_pass\s+\S*:\K[0-9]+' "$SITES_AVAILABLE"/ 2>/dev/null |
+		sort -n -u | paste -sd, - | sed 's/,/, /g'
 }
 
 confirm_yesno() {
@@ -185,7 +193,7 @@ add_or_update_vhost() {
 	local pre_target="$2"
 
 	DOMAIN=$(prompt_input "Nom de domaine (ex: example.com):" "$pre_domain")
-	TARGET=$(prompt_input "Backend (ex: http://127.0.0.1:8888):" "${pre_target:-http://127.0.0.1:}")
+	TARGET=$(prompt_input "Backend (ex: http://127.0.0.1:8888):\n\nPorts deja utilises:\n$(used_ports)" "${pre_target:-http://127.0.0.1:}" 16 76)
 	DOMAIN="${DOMAIN,,}"
 
 	if ! [[ "$DOMAIN" =~ ^[a-z0-9.-]+$ ]] || [[ "$DOMAIN" != *.* ]]; then
