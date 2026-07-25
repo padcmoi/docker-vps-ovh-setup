@@ -159,6 +159,9 @@ add_or_update_vhost() {
 server {
     listen 80;
     server_name $DOMAIN www.$DOMAIN;
+	
+    client_max_body_size 50M;
+
     location / {
         proxy_pass $TARGET;
         proxy_http_version 1.1;
@@ -187,6 +190,9 @@ server {
     server_name $DOMAIN www.$DOMAIN;
     ssl_certificate $CERT_PATH;
     ssl_certificate_key $KEY_PATH;
+
+    client_max_body_size 50M;
+
     location / {
         proxy_pass $TARGET;
         proxy_http_version 1.1;
@@ -206,6 +212,7 @@ EOF
 server {
     listen 80;
     server_name $DOMAIN www.$DOMAIN;
+    client_max_body_size 50M;
     location / {
         proxy_pass $TARGET;
         proxy_http_version 1.1;
@@ -225,6 +232,9 @@ server {
     server_name $DOMAIN www.$DOMAIN;
     ssl_certificate $CERT_PATH;
     ssl_certificate_key $KEY_PATH;
+
+    client_max_body_size 50M;
+
     location / {
         proxy_pass $TARGET;
         proxy_http_version 1.1;
