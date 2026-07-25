@@ -2,6 +2,7 @@
 # Gestion interactive des vhosts nginx avec whiptail TUI
 set -euo pipefail
 
+VERSION="1.1.0"
 SITES_AVAILABLE="/etc/nginx/sites-available"
 SITES_ENABLED="/etc/nginx/sites-enabled"
 VHOST_MANAGER_ENV_FILE="/etc/vhost-manager.env"
@@ -184,7 +185,7 @@ add_or_update_vhost() {
 	local pre_target="$2"
 
 	DOMAIN=$(prompt_input "Nom de domaine (ex: example.com):" "$pre_domain")
-	TARGET=$(prompt_input "Backend (ex: http://127.0.0.1:8888):" "$pre_target")
+	TARGET=$(prompt_input "Backend (ex: http://127.0.0.1:8888):" "${pre_target:-http://127.0.0.1:}")
 	DOMAIN="${DOMAIN,,}"
 
 	if ! [[ "$DOMAIN" =~ ^[a-z0-9.-]+$ ]] || [[ "$DOMAIN" != *.* ]]; then
@@ -313,7 +314,7 @@ repair_vhost() {
 main_menu() {
 	ensure_root
 	while true; do
-		CHOICE=$(whiptail --title "Vhost Manager" --menu "Naviguer avec flèches" 20 70 10 \
+		CHOICE=$(whiptail --title "Vhost Manager v$VERSION" --menu "Naviguer avec flèches" 20 70 10 \
 			"1" "Lister / voir vhost" \
 			"2" "Ajouter vhost" \
 			"3" "Modifier vhost" \
