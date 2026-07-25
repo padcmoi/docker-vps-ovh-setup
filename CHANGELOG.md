@@ -4,6 +4,7 @@ This is a custom changelog format, generated from git history.
 
 ## [Unreleased] - yyyy-mm-dd
 
+- feat: install changelog-rebuild tools via setup script [363a3cb](https://github.com/padcmoi/docker-vps-ovh-setup/commit/363a3cb7ad8d5deeb8ab6f9b795a9ac027515208) (25-07-2026)
 - Merge tag '1.0.6' into develop [b902ddc](https://github.com/padcmoi/docker-vps-ovh-setup/commit/b902ddc16ad6b41ad918d323a898a7614c3adb3c) (07-04-2026)
 
 ## Hotfix v1.0.6

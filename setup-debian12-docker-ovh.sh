@@ -537,18 +537,20 @@ install_management_scripts() {
 	chmod +x "$SCRIPTS_DIR"/*.sh
 
 	# Copier les scripts de gestion spécifiques à Debian 12 + Docker
-	cp "$SCRIPTS_DIR/vhost-manager.sh" /usr/local/bin/vhost-manager.sh
-	cp "$SCRIPTS_DIR/changelog-rebuild" /usr/local/bin/changelog-rebuild
-	cp "$SCRIPTS_DIR/changelog-rebuild-semver" /usr/local/bin/changelog-rebuild-semver
-
-	chmod +x /usr/local/bin/vhost-manager.sh
-	chmod +x /usr/local/bin/changelog-rebuild
-	chmod +x /usr/local/bin/changelog-rebuild-semver
+	for script in vhost-manager.sh changelog-rebuild changelog-rebuild-semver \
+		docker-kill dtop.sh reboot reboot-hard vscode-rg-killer.sh vscode-rg-repair.sh; do
+		cp "$SCRIPTS_DIR/$script" "/usr/local/bin/$script"
+		chmod +x "/usr/local/bin/$script"
+	done
 
 	print_success "Scripts de gestion vhost Debian 12 installés"
 	print_info "• vhost-manager.sh - Interface TUI complète"
 	print_info "• changelog-rebuild - Régénère un CHANGELOG groupé par tag"
 	print_info "• changelog-rebuild-semver - Régénère un CHANGELOG Keep a Changelog"
+	print_info "• docker-kill - Tue tous les conteneurs sauf portainer"
+	print_info "• dtop.sh - Stats docker live style htop"
+	print_info "• reboot / reboot-hard - Reboot immédiat forcé"
+	print_info "• vscode-rg-killer.sh / vscode-rg-repair.sh - Gestion ripgrep VSCode"
 }
 
 # =============================================================================
