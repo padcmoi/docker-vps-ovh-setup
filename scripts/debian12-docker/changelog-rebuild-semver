@@ -1,0 +1,247 @@
+#!/usr/bin/env bash
+# Rebuild a CHANGELOG.md matching keepachangelog.com's own reference CHANGELOG.md:
+# grouped by git tag as "## [X.Y.Z] - yyyy-mm-dd", then by Keep a Changelog category
+# (Added/Changed/Deprecated/Removed/Fixed/Security), inferred from each commit's
+# Conventional Commits type(scope): subject.
+# Usage: changelog-rebuild-semver [--dry-run] [--base-url URL] [--commit-path /commit/|/-/commit/] <path/to/CHANGELOG.md>
+set -euo pipefail
+
+usage() {
+	cat <<'EOF'
+Usage: changelog-rebuild-semver [options] <path/to/CHANGELOG.md>
+
+Rebuilds the target changelog from the git history of the repo it lives in.
+
+Structure (https://keepachangelog.com/en/1.1.0/), no "Release"/"Hotfix" label - the version
+number alone already tells you that (X.Y.0 = release, X.Y.Z>0 = hotfix):
+  ## [Unreleased]                commits after the latest tag (or everything, if no tag yet)
+  ## [X.Y.Z] - yyyy-mm-dd        one per tag, dated with that tag's own commit date
+Each version section is split into the spec's 6 categories (only non-empty ones are printed,
+always in this order): Added, Changed, Deprecated, Removed, Fixed, Security.
+A trailing reference-link section is appended ([unreleased]/[X.Y.Z]: <compare-url>), matching
+the spec's own CHANGELOG.md so every bracketed version heading is a clickable diff/tag link.
+
+Per commit "type(scope): subject" (Conventional Commits):
+  - type maps to a category: feat -> Added, fix -> Fixed, everything else -> Changed
+    (overridden to Security when the subject mentions security/vuln/CVE, to Deprecated when
+    it mentions "deprecat*", to Removed for a feat that mentions remove/drop)
+  - the leading "type(scope):" is stripped from the displayed line; "scope" (if any) is kept
+    as a separate trailing tag so it never reads like it was part of what was done.
+  - a commit with no Conventional Commits prefix is kept as-is (capitalized), filed under Changed.
+
+Each line: - Subject, capitalized. [_(scope)_] [<short-hash>](<repo-url>/commit/<full-hash>) (dd-mm-YYYY)
+
+Tags are matched as X.Y.Z with an optional leading "v" (v1.2.3 or 1.2.3) - anything else (backup
+tags, etc.) is ignored. Headings always normalize to bare "X.Y.Z" regardless of the tag's own prefix.
+
+Options:
+  --dry-run              print the result to stdout instead of writing the file
+  --base-url URL         override the detected repo web URL (e.g. https://github.com/org/repo)
+  --commit-path PATH     override the commit path segment (default: /-/commit/ for gitlab hosts, /commit/ otherwise)
+  -h, --help             show this help
+EOF
+}
+
+dry_run=0
+base_url_override=""
+commit_path_override=""
+target=""
+
+while [[ $# -gt 0 ]]; do
+	case "$1" in
+	--dry-run)
+		dry_run=1
+		shift
+		;;
+	--base-url)
+		base_url_override="$2"
+		shift 2
+		;;
+	--commit-path)
+		commit_path_override="$2"
+		shift 2
+		;;
+	-h | --help)
+		usage
+		exit 0
+		;;
+	-*)
+		echo "changelog-rebuild-semver: unknown option $1" >&2
+		usage >&2
+		exit 1
+		;;
+	*)
+		target="$1"
+		shift
+		;;
+	esac
+done
+
+if [[ -z "$target" ]]; then
+	echo "changelog-rebuild-semver: missing <path/to/CHANGELOG.md>" >&2
+	usage >&2
+	exit 1
+fi
+
+target_dir=$(cd "$(dirname "$target")" && pwd)
+target_file="$target_dir/$(basename "$target")"
+
+repo_root=$(git -C "$target_dir" rev-parse --show-toplevel 2>/dev/null) || {
+	echo "changelog-rebuild-semver: $target_dir is not inside a git repository" >&2
+	exit 1
+}
+
+remote_name=$(git -C "$repo_root" remote | head -1)
+if [[ -z "$remote_name" ]]; then
+	echo "changelog-rebuild-semver: repo at $repo_root has no git remote configured" >&2
+	exit 1
+fi
+remote_url=$(git -C "$repo_root" remote get-url "$remote_name")
+
+if [[ -n "$base_url_override" ]]; then
+	base_url="${base_url_override%/}"
+else
+	base_url="$remote_url"
+	base_url="${base_url%.git}"
+	if [[ "$base_url" =~ ^git@([^:]+):(.+)$ ]]; then
+		base_url="https://${BASH_REMATCH[1]}/${BASH_REMATCH[2]}"
+	elif [[ "$base_url" =~ ^ssh://git@([^/]+)/(.+)$ ]]; then
+		base_url="https://${BASH_REMATCH[1]}/${BASH_REMATCH[2]}"
+	fi
+fi
+
+host=$(echo "$base_url" | sed -E 's#^[a-z]+://([^/]+)/.*#\1#')
+
+if [[ -n "$commit_path_override" ]]; then
+	commit_path="$commit_path_override"
+elif [[ "$host" == *gitlab* ]]; then
+	commit_path="/-/commit/"
+else
+	commit_path="/commit/"
+fi
+
+if [[ "$host" == *gitlab* ]]; then
+	compare_path="/-/compare/"
+	tag_view_path="/-/tags/"
+else
+	compare_path="/compare/"
+	tag_view_path="/releases/tag/"
+fi
+
+CATEGORY_ORDER=(Added Changed Deprecated Removed Fixed Security)
+COMMIT_SUBJECT_RE='^([a-zA-Z]+)(\(([^)]*)\))?\!?:[[:space:]]*(.*)$'
+
+# groups every commit in $1 (a git log revision range/arg) under its Keep a Changelog
+# category and prints the non-empty "### Category" blocks in canonical order.
+build_section_body() {
+	local range="$1"
+	local -A buckets=()
+	local full short date subject
+	while IFS=$'\x01' read -r full short date subject; do
+		[[ -z "$full" ]] && continue
+
+		local type="" scope="" desc="$subject"
+		if [[ "$subject" =~ $COMMIT_SUBJECT_RE ]]; then
+			type="${BASH_REMATCH[1],,}"
+			scope="${BASH_REMATCH[3]}"
+			desc="${BASH_REMATCH[4]}"
+		fi
+		[[ -n "$desc" ]] && desc="${desc^}"
+
+		local lc="${subject,,}" category
+		if [[ "$lc" == *security* || "$lc" == *vulnerab* || "$lc" =~ cve-?[0-9] ]]; then
+			category="Security"
+		elif [[ "$lc" == *deprecat* ]]; then
+			category="Deprecated"
+		elif [[ "$type" == "feat" && ("$lc" == *remove* || "$lc" == *drop*) ]]; then
+			category="Removed"
+		else
+			case "$type" in
+			feat) category="Added" ;;
+			fix) category="Fixed" ;;
+			*) category="Changed" ;;
+			esac
+		fi
+
+		local entry="- ${desc}"
+		[[ -n "$scope" ]] && entry+=" _(${scope})_"
+		entry+=" [${short}](${base_url}${commit_path}${full}) (${date})"
+
+		if [[ -n "${buckets[$category]:-}" ]]; then
+			buckets[$category]+=$'\n'"$entry"
+		else
+			buckets[$category]="$entry"
+		fi
+	done < <(git -C "$repo_root" log $range --date=format:'%d-%m-%Y' --pretty='%H%x01%h%x01%ad%x01%s')
+
+	local out="" category
+	for category in "${CATEGORY_ORDER[@]}"; do
+		if [[ -n "${buckets[$category]:-}" ]]; then
+			out+="### ${category}"$'\n\n'"${buckets[$category]}"$'\n\n'
+		fi
+	done
+	printf '%s' "$out"
+}
+
+mapfile -t tags < <(
+	git -C "$repo_root" tag -l |
+		grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' |
+		while IFS= read -r t; do printf '%s\t%s\n' "${t#v}" "$t"; done |
+		sort -t $'\t' -k1,1 -Vr |
+		cut -f2 ||
+		true
+)
+
+sections=()
+refs=()
+
+if [[ ${#tags[@]} -gt 0 ]]; then
+	unreleased=$(build_section_body "${tags[0]}..HEAD")
+else
+	unreleased=$(build_section_body "HEAD")
+fi
+unreleased_section="## [Unreleased]"
+[[ -n "$unreleased" ]] && unreleased_section+=$'\n\n'"$unreleased"
+sections+=("$unreleased_section")
+if [[ ${#tags[@]} -gt 0 ]]; then
+	refs+=("[unreleased]: ${base_url}${compare_path}${tags[0]}...HEAD")
+fi
+
+for ((i = 0; i < ${#tags[@]}; i++)); do
+	tag="${tags[$i]}"
+	if ((i + 1 < ${#tags[@]})); then
+		lower_tag="${tags[$((i + 1))]}"
+		range="${lower_tag}..${tag}"
+	else
+		lower_tag=""
+		range="${tag}"
+	fi
+	version="${tag#v}"
+	commits=$(build_section_body "$range")
+	if [[ -n "$commits" ]]; then
+		tag_date=$(git -C "$repo_root" log -1 --date=format:'%Y-%m-%d' --pretty=%ad "${tag}^{commit}")
+		sections+=("## [${version}] - ${tag_date}"$'\n\n'"$commits")
+		if [[ -n "$lower_tag" ]]; then
+			refs+=("[${version}]: ${base_url}${compare_path}${lower_tag}...${tag}")
+		else
+			refs+=("[${version}]: ${base_url}${tag_view_path}${tag}")
+		fi
+	fi
+done
+
+header=$'# Changelog\n\nAll notable changes to this project will be documented in this file.\n\nThe format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),\nand this project adheres to [Semantic Versioning](https://semver.org/).'
+
+body=$(printf '%s\n\n' "${sections[@]}")
+if [[ ${#refs[@]} -gt 0 ]]; then
+	footer=$(printf '%s\n' "${refs[@]}")
+	result=$(printf '%s\n\n%s\n%s' "$header" "$body" "$footer")
+else
+	result=$(printf '%s\n\n%s' "$header" "$body")
+fi
+
+if [[ $dry_run -eq 1 ]]; then
+	printf '%s\n' "$result"
+else
+	printf '%s\n' "$result" >"$target_file"
+	echo "changelog-rebuild-semver: wrote ${#tags[@]} tag section(s) + $([[ -n "$unreleased" ]] && echo 1 || echo 0) unreleased section to $target_file (repo: $repo_root, base: $base_url$commit_path)"
+fi
