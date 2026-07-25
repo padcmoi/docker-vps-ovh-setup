@@ -265,7 +265,7 @@ main_menu() {
 			"2" "Ajouter vhost" \
 			"3" "Modifier vhost" \
 			"4" "Supprimer vhost" \
-			"5" "Activer / Désactiver vhost" \
+			"5" "Activer / Desactiver vhost" \
 			"6" "Quitter" 3>&1 1>&2 2>&3)
 		case "$CHOICE" in
 		"1") sel=$(list_vhosts_menu) && whiptail --scrolltext --textbox "$SITES_AVAILABLE/$sel" 30 100 ;;
