@@ -3,6 +3,11 @@
 set -euo pipefail
 
 VERSION="1.1.0"
+
+# Softer TUI palette: the default bright-blue background is harsh.
+export NEWT_COLORS='root=,black
+roottext=lightgray,black'
+
 SITES_AVAILABLE="/etc/nginx/sites-available"
 SITES_ENABLED="/etc/nginx/sites-enabled"
 VHOST_MANAGER_ENV_FILE="/etc/vhost-manager.env"
