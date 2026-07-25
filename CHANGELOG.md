@@ -2,8 +2,18 @@
 
 This is a custom changelog format, generated from git history.
 
-## [Unreleased] - yyyy-mm-dd
+## Release v1.1.0
 
+- feat: install Node.js LTS and pnpm during VPS setup [5f339ce](https://github.com/padcmoi/docker-vps-ovh-setup/commit/5f339ce6b520756a68c999303929215e6f359620) (25-07-2026)
+- feat: soften TUI background from bright blue to black [ad4c983](https://github.com/padcmoi/docker-vps-ovh-setup/commit/ad4c983ec17c6d8674ef69ab135271ff96dec22c) (25-07-2026)
+- feat: show target ports in vhost list and used ports when adding [880c061](https://github.com/padcmoi/docker-vps-ovh-setup/commit/880c061a3490fe89be8110655b26141a0e4bb8b9) (25-07-2026)
+- feat: show version in title and prefill backend field [062729d](https://github.com/padcmoi/docker-vps-ovh-setup/commit/062729d226518dabe1a854121e6becbbf88a71ea) (25-07-2026)
+- feat: add repair vhost action resetting to factory template [25e1450](https://github.com/padcmoi/docker-vps-ovh-setup/commit/25e1450d7539cc41284c3c411043df633feb8d60) (25-07-2026)
+- fix: prevent menu label truncation on accented character [1d41a40](https://github.com/padcmoi/docker-vps-ovh-setup/commit/1d41a40b40fba4fcdc8e394d913eb823096c5fa3) (25-07-2026)
+- feat: enable scrolling when viewing a vhost [e67794d](https://github.com/padcmoi/docker-vps-ovh-setup/commit/e67794d4dff2e8c356dce4c781b90872eb3a6767) (25-07-2026)
+- feat: set client_max_body_size 50M on generated vhosts [a0637b4](https://github.com/padcmoi/docker-vps-ovh-setup/commit/a0637b4aefb4e0d435fa996201e6a03819e2c8cc) (25-07-2026)
+- style: format vhost-manager.sh [02d139a](https://github.com/padcmoi/docker-vps-ovh-setup/commit/02d139aee2d19c34a3c4c6b2608d87a430187da5) (25-07-2026)
+- feat: install docker/vscode/reboot helper scripts via setup [ff98cf0](https://github.com/padcmoi/docker-vps-ovh-setup/commit/ff98cf0ed9e009d9bea6d26800cf225d00a54c46) (25-07-2026)
 - feat: install changelog-rebuild tools via setup script [363a3cb](https://github.com/padcmoi/docker-vps-ovh-setup/commit/363a3cb7ad8d5deeb8ab6f9b795a9ac027515208) (25-07-2026)
 - Merge tag '1.0.6' into develop [b902ddc](https://github.com/padcmoi/docker-vps-ovh-setup/commit/b902ddc16ad6b41ad918d323a898a7614c3adb3c) (07-04-2026)
 
