@@ -1,0 +1,2 @@
+#!/bin/bash
+docker ps --format '{{.ID}} {{.Names}}' | awk '$2 != "portainer" {print $1}' | xargs -r docker kill

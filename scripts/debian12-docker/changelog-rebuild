@@ -1,0 +1,159 @@
+#!/usr/bin/env bash
+# Rebuild a CHANGELOG.md grouped by git tag (Release = X.Y.0, Hotfix = X.Y.Z with Z>0).
+# Usage: changelog-rebuild [--dry-run] [--base-url URL] [--commit-path /commit/|/-/commit/] <path/to/CHANGELOG.md>
+set -euo pipefail
+
+usage() {
+	cat <<'EOF'
+Usage: changelog-rebuild [options] <path/to/CHANGELOG.md>
+
+Rebuilds the target changelog from the git history of the repo it lives in, grouped by tag:
+  ## [Unreleased] - yyyy-mm-dd   commits after the latest tag (or everything, if the repo has no tag yet); literal placeholder, release date unknown
+  ## Release vX.Y.0        tag whose patch number is 0
+  ## Hotfix vX.Y.Z         tag whose patch number is > 0
+Each commit line: - <commit subject> [<short-hash>](<repo-url>/commit/<full-hash>) (dd-mm-YYYY)
+Tags are matched strictly as X.Y.Z (no "v" prefix, no suffix) - anything else (backup tags, etc.) is ignored.
+
+Options:
+  --dry-run              print the result to stdout instead of writing the file
+  --base-url URL         override the detected repo web URL (e.g. https://github.com/org/repo)
+  --commit-path PATH     override the commit path segment (default: /-/commit/ for gitlab hosts, /commit/ otherwise)
+  -h, --help             show this help
+EOF
+}
+
+dry_run=0
+base_url_override=""
+commit_path_override=""
+target=""
+
+while [[ $# -gt 0 ]]; do
+	case "$1" in
+	--dry-run)
+		dry_run=1
+		shift
+		;;
+	--base-url)
+		base_url_override="$2"
+		shift 2
+		;;
+	--commit-path)
+		commit_path_override="$2"
+		shift 2
+		;;
+	-h | --help)
+		usage
+		exit 0
+		;;
+	-*)
+		echo "changelog-rebuild: unknown option $1" >&2
+		usage >&2
+		exit 1
+		;;
+	*)
+		target="$1"
+		shift
+		;;
+	esac
+done
+
+if [[ -z "$target" ]]; then
+	echo "changelog-rebuild: missing <path/to/CHANGELOG.md>" >&2
+	usage >&2
+	exit 1
+fi
+
+target_dir=$(cd "$(dirname "$target")" && pwd)
+target_file="$target_dir/$(basename "$target")"
+
+repo_root=$(git -C "$target_dir" rev-parse --show-toplevel 2>/dev/null) || {
+	echo "changelog-rebuild: $target_dir is not inside a git repository" >&2
+	exit 1
+}
+
+remote_name=$(git -C "$repo_root" remote | head -1)
+if [[ -z "$remote_name" ]]; then
+	echo "changelog-rebuild: repo at $repo_root has no git remote configured" >&2
+	exit 1
+fi
+remote_url=$(git -C "$repo_root" remote get-url "$remote_name")
+
+if [[ -n "$base_url_override" ]]; then
+	base_url="${base_url_override%/}"
+else
+	base_url="$remote_url"
+	base_url="${base_url%.git}"
+	if [[ "$base_url" =~ ^git@([^:]+):(.+)$ ]]; then
+		base_url="https://${BASH_REMATCH[1]}/${BASH_REMATCH[2]}"
+	elif [[ "$base_url" =~ ^ssh://git@([^/]+)/(.+)$ ]]; then
+		base_url="https://${BASH_REMATCH[1]}/${BASH_REMATCH[2]}"
+	fi
+fi
+
+host=$(echo "$base_url" | sed -E 's#^[a-z]+://([^/]+)/.*#\1#')
+
+if [[ -n "$commit_path_override" ]]; then
+	commit_path="$commit_path_override"
+elif [[ "$host" == *gitlab* ]]; then
+	commit_path="/-/commit/"
+else
+	commit_path="/commit/"
+fi
+
+pretty_fmt="- %s [%h](${base_url}${commit_path}%H) (%ad)"
+log_commits() {
+	# $1 = git log revision range/arg
+	git -C "$repo_root" log $1 --date=format:'%d-%m-%Y' --pretty="$pretty_fmt"
+}
+
+mapfile -t tags < <(
+	git -C "$repo_root" tag -l |
+		grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' |
+		while IFS= read -r t; do printf '%s\t%s\n' "${t#v}" "$t"; done |
+		sort -t $'\t' -k1,1 -Vr |
+		cut -f2 ||
+		true
+)
+
+sections=()
+
+if [[ ${#tags[@]} -gt 0 ]]; then
+	unreleased=$(log_commits "${tags[0]}..HEAD")
+else
+	unreleased=$(log_commits "HEAD")
+fi
+if [[ -n "$unreleased" ]]; then
+	sections+=("## [Unreleased] - yyyy-mm-dd"$'\n\n'"$unreleased")
+fi
+
+for ((i = 0; i < ${#tags[@]}; i++)); do
+	tag="${tags[$i]}"
+	if ((i + 1 < ${#tags[@]})); then
+		range="${tags[$((i + 1))]}..${tag}"
+	else
+		range="${tag}"
+	fi
+	version="${tag#v}"
+	patch="${version##*.}"
+	if [[ "$patch" == "0" ]]; then
+		kind="Release"
+	else
+		kind="Hotfix"
+	fi
+	commits=$(log_commits "$range")
+	if [[ -n "$commits" ]]; then
+		sections+=("## ${kind} v${version}"$'\n\n'"$commits")
+	fi
+done
+
+header=$'# Changelog\n\nThis is a custom changelog format, generated from git history.'
+
+body=$(printf '%s\n\n' "${sections[@]}")
+result=$(printf '%s\n\n%s' "$header" "$body")
+
+if [[ $dry_run -eq 1 ]]; then
+	printf '%s\n' "$result"
+else
+	printf '%s\n' "$result" >"$target_file"
+	echo "changelog-rebuild: wrote ${#tags[@]} tag section(s) + $([[ -n "$unreleased" ]] && echo 1 || echo 0) unreleased section to $target_file (repo: $repo_root, base: $base_url$commit_path)"
+fi

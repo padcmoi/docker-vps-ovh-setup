@@ -37,10 +37,10 @@ AUTO_MODE=false
 # Gestion des arguments
 for arg in "$@"; do
 	case "$arg" in
-	--auto|--non-interactive)
+	--auto | --non-interactive)
 		AUTO_MODE=true
 		;;
-	-h|--help)
+	-h | --help)
 		echo "Usage: $0 [--auto]"
 		echo "  --auto, --non-interactive   Exécute l'installation avec les valeurs par défaut"
 		exit 0
@@ -524,6 +524,21 @@ cleanup_services() {
 	fi
 }
 
+install_node_stack() {
+	print_step "Installation de Node.js (LTS) + pnpm"
+
+	# Node.js dernier LTS via le dépôt NodeSource.
+	curl -fsSL https://deb.nodesource.com/setup_lts.x | bash -
+	apt install -y nodejs
+
+	# pnpm via corepack (livré avec Node). Le prompt de téléchargement est
+	# désactivé pour rester non interactif.
+	corepack enable
+	COREPACK_ENABLE_DOWNLOAD_PROMPT=0 corepack prepare pnpm@latest --activate
+
+	print_success "Node.js $(node -v) + pnpm $(pnpm -v) installés"
+}
+
 install_management_scripts() {
 	print_step "Installation des scripts de gestion vhost Debian 12"
 
@@ -537,12 +552,20 @@ install_management_scripts() {
 	chmod +x "$SCRIPTS_DIR"/*.sh
 
 	# Copier les scripts de gestion spécifiques à Debian 12 + Docker
-	cp "$SCRIPTS_DIR/vhost-manager.sh" /usr/local/bin/vhost-manager.sh
-
-	chmod +x /usr/local/bin/vhost-manager.sh
+	for script in vhost-manager.sh changelog-rebuild changelog-rebuild-semver \
+		docker-kill dtop.sh reboot reboot-hard vscode-rg-killer.sh vscode-rg-repair.sh; do
+		cp "$SCRIPTS_DIR/$script" "/usr/local/bin/$script"
+		chmod +x "/usr/local/bin/$script"
+	done
 
 	print_success "Scripts de gestion vhost Debian 12 installés"
 	print_info "• vhost-manager.sh - Interface TUI complète"
+	print_info "• changelog-rebuild - Régénère un CHANGELOG groupé par tag"
+	print_info "• changelog-rebuild-semver - Régénère un CHANGELOG Keep a Changelog"
+	print_info "• docker-kill - Tue tous les conteneurs sauf portainer"
+	print_info "• dtop.sh - Stats docker live style htop"
+	print_info "• reboot / reboot-hard - Reboot immédiat forcé"
+	print_info "• vscode-rg-killer.sh / vscode-rg-repair.sh - Gestion ripgrep VSCode"
 }
 
 # =============================================================================
@@ -571,6 +594,7 @@ main() {
 	install_fail2ban
 	install_nginx_stack
 	install_portainer
+	install_node_stack
 	install_management_scripts
 
 	# Résumé final
