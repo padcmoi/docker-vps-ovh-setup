@@ -268,7 +268,7 @@ main_menu() {
 			"5" "Activer / Désactiver vhost" \
 			"6" "Quitter" 3>&1 1>&2 2>&3)
 		case "$CHOICE" in
-		"1") sel=$(list_vhosts_menu) && whiptail --textbox "$SITES_AVAILABLE/$sel" 30 100 ;;
+		"1") sel=$(list_vhosts_menu) && whiptail --scrolltext --textbox "$SITES_AVAILABLE/$sel" 30 100 ;;
 		"2") add_or_update_vhost "" "" ;;
 		"3") sel=$(list_vhosts_menu) && rm -f "$SITES_AVAILABLE/$sel" "$SITES_ENABLED/$sel" && add_or_update_vhost "$sel" "" ;;
 		"4") sel=$(list_vhosts_menu) && rm -f "$SITES_AVAILABLE/$sel" "$SITES_ENABLED/$sel" && nginx -t && systemctl reload nginx ;;
