@@ -75,6 +75,110 @@ cert_covers_domain() {
 		grep -q "DNS:$domain"
 }
 
+# Writes $CONF from the canonical template, dropping any manual edits. Mode is
+# derived from the current values: empty CERT_PATH -> HTTP only; SSL with
+# FORCE_REDIRECT=yes -> 301 redirect + HTTPS; SSL with FORCE_REDIRECT=no ->
+# HTTP + HTTPS. Shared by "Ajouter" and "Réparer".
+write_vhost_conf() {
+	if [ -z "$CERT_PATH" ]; then
+		cat >"$CONF" <<EOF
+server {
+    listen 80;
+    server_name $DOMAIN www.$DOMAIN;
+
+    client_max_body_size 50M;
+
+    location / {
+        proxy_pass $TARGET;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_set_header X-Forwarded-Host \$host;
+        proxy_set_header X-Forwarded-Port \$server_port;
+    }
+}
+EOF
+	elif [ "$FORCE_REDIRECT" = "yes" ]; then
+		cat >"$CONF" <<EOF
+server {
+    listen 80;
+    server_name $DOMAIN www.$DOMAIN;
+    return 301 https://\$host\$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    server_name $DOMAIN www.$DOMAIN;
+    ssl_certificate $CERT_PATH;
+    ssl_certificate_key $KEY_PATH;
+
+    client_max_body_size 50M;
+
+    location / {
+        proxy_pass $TARGET;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_set_header X-Forwarded-Host \$host;
+        proxy_set_header X-Forwarded-Port 443;
+    }
+}
+EOF
+	else
+		cat >"$CONF" <<EOF
+server {
+    listen 80;
+    server_name $DOMAIN www.$DOMAIN;
+
+    client_max_body_size 50M;
+
+    location / {
+        proxy_pass $TARGET;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_set_header X-Forwarded-Host \$host;
+        proxy_set_header X-Forwarded-Port \$server_port;
+    }
+}
+
+server {
+    listen 443 ssl;
+    server_name $DOMAIN www.$DOMAIN;
+    ssl_certificate $CERT_PATH;
+    ssl_certificate_key $KEY_PATH;
+
+    client_max_body_size 50M;
+
+    location / {
+        proxy_pass $TARGET;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_set_header X-Forwarded-Host \$host;
+        proxy_set_header X-Forwarded-Port 443;
+    }
+}
+EOF
+	fi
+}
+
 add_or_update_vhost() {
 	local pre_domain="$1"
 	local pre_target="$2"
@@ -153,108 +257,57 @@ add_or_update_vhost() {
 
 	CONF="$SITES_AVAILABLE/$DOMAIN"
 
-	if [ "$SSL_CHOICE" = "3" ]; then
-		# HTTP uniquement
-		cat >"$CONF" <<EOF
-server {
-    listen 80;
-    server_name $DOMAIN www.$DOMAIN;
-	
-    client_max_body_size 50M;
-
-    location / {
-        proxy_pass $TARGET;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade \$http_upgrade;
-        proxy_set_header Connection "upgrade";
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
-        proxy_set_header X-Forwarded-Host \$host;
-        proxy_set_header X-Forwarded-Port \$server_port;
-    }
-}
-EOF
-	else
-		if [ "$FORCE_REDIRECT" = "yes" ]; then
-			cat >"$CONF" <<EOF
-server {
-    listen 80;
-    server_name $DOMAIN www.$DOMAIN;
-    return 301 https://\$host\$request_uri;
-}
-
-server {
-    listen 443 ssl;
-    server_name $DOMAIN www.$DOMAIN;
-    ssl_certificate $CERT_PATH;
-    ssl_certificate_key $KEY_PATH;
-
-    client_max_body_size 50M;
-
-    location / {
-        proxy_pass $TARGET;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade \$http_upgrade;
-        proxy_set_header Connection "upgrade";
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto https;
-        proxy_set_header X-Forwarded-Host \$host;
-        proxy_set_header X-Forwarded-Port 443;
-    }
-}
-EOF
-		else
-			cat >"$CONF" <<EOF
-server {
-    listen 80;
-    server_name $DOMAIN www.$DOMAIN;
-    client_max_body_size 50M;
-    location / {
-        proxy_pass $TARGET;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade \$http_upgrade;
-        proxy_set_header Connection "upgrade";
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
-        proxy_set_header X-Forwarded-Host \$host;
-        proxy_set_header X-Forwarded-Port \$server_port;
-    }
-}
-
-server {
-    listen 443 ssl;
-    server_name $DOMAIN www.$DOMAIN;
-    ssl_certificate $CERT_PATH;
-    ssl_certificate_key $KEY_PATH;
-
-    client_max_body_size 50M;
-
-    location / {
-        proxy_pass $TARGET;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade \$http_upgrade;
-        proxy_set_header Connection "upgrade";
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto https;
-        proxy_set_header X-Forwarded-Host \$host;
-        proxy_set_header X-Forwarded-Port 443;
-    }
-}
-EOF
-		fi
-	fi
+	write_vhost_conf
 
 	ln -sf "$CONF" "$SITES_ENABLED/$DOMAIN"
 	nginx -t && systemctl reload nginx
 	whiptail --msgbox "Vhost $DOMAIN créé/mis à jour." 8 50
+}
+
+# Rewrites an existing vhost from the canonical template, stripping any manual
+# additions (auth_basic, extra headers, comments...). The original mode and its
+# parameters are inferred from the current file.
+repair_vhost() {
+	local sel="$1"
+	local conf="$SITES_AVAILABLE/$sel"
+
+	if [ ! -f "$conf" ]; then
+		whiptail --msgbox "Vhost introuvable: $sel" 8 60
+		return 1
+	fi
+
+	DOMAIN="$sel"
+	TARGET=$(grep -m1 -oP 'proxy_pass\s+\K[^;]+' "$conf" || true)
+
+	if [ -z "$TARGET" ]; then
+		whiptail --msgbox "Impossible de detecter le backend (proxy_pass) de $sel.\nReparation annulee." 10 72
+		return 1
+	fi
+
+	if grep -q 'listen 443 ssl' "$conf"; then
+		CERT_PATH=$(grep -m1 -oP 'ssl_certificate\s+\K[^;]+' "$conf" || true)
+		KEY_PATH=$(grep -m1 -oP 'ssl_certificate_key\s+\K[^;]+' "$conf" || true)
+		if grep -q 'return 301' "$conf"; then
+			FORCE_REDIRECT="yes"
+		else
+			FORCE_REDIRECT="no"
+		fi
+	else
+		CERT_PATH=""
+		KEY_PATH=""
+		FORCE_REDIRECT="no"
+	fi
+
+	CONF="$conf"
+	write_vhost_conf
+	ln -sf "$CONF" "$SITES_ENABLED/$DOMAIN"
+
+	if nginx -t 2>/dev/null; then
+		systemctl reload nginx
+		whiptail --msgbox "Vhost $DOMAIN repare (remis au template d'origine)." 8 66
+	else
+		whiptail --msgbox "Vhost $DOMAIN reecrit mais 'nginx -t' a echoue.\nVerifiez la configuration." 10 72
+	fi
 }
 
 main_menu() {
@@ -264,16 +317,18 @@ main_menu() {
 			"1" "Lister / voir vhost" \
 			"2" "Ajouter vhost" \
 			"3" "Modifier vhost" \
-			"4" "Supprimer vhost" \
-			"5" "Activer / Desactiver vhost" \
-			"6" "Quitter" 3>&1 1>&2 2>&3)
+			"4" "Reparer vhost (valeurs usine)" \
+			"5" "Supprimer vhost" \
+			"6" "Activer / Desactiver vhost" \
+			"7" "Quitter" 3>&1 1>&2 2>&3)
 		case "$CHOICE" in
 		"1") sel=$(list_vhosts_menu) && whiptail --scrolltext --textbox "$SITES_AVAILABLE/$sel" 30 100 ;;
 		"2") add_or_update_vhost "" "" ;;
 		"3") sel=$(list_vhosts_menu) && rm -f "$SITES_AVAILABLE/$sel" "$SITES_ENABLED/$sel" && add_or_update_vhost "$sel" "" ;;
-		"4") sel=$(list_vhosts_menu) && rm -f "$SITES_AVAILABLE/$sel" "$SITES_ENABLED/$sel" && nginx -t && systemctl reload nginx ;;
-		"5") sel=$(list_vhosts_menu) && [ -L "$SITES_ENABLED/$sel" ] && rm -f "$SITES_ENABLED/$sel" || ln -sf "$SITES_AVAILABLE/$sel" "$SITES_ENABLED/$sel" && nginx -t && systemctl reload nginx ;;
-		"6") exit 0 ;;
+		"4") sel=$(list_vhosts_menu) && repair_vhost "$sel" ;;
+		"5") sel=$(list_vhosts_menu) && rm -f "$SITES_AVAILABLE/$sel" "$SITES_ENABLED/$sel" && nginx -t && systemctl reload nginx ;;
+		"6") sel=$(list_vhosts_menu) && [ -L "$SITES_ENABLED/$sel" ] && rm -f "$SITES_ENABLED/$sel" || ln -sf "$SITES_AVAILABLE/$sel" "$SITES_ENABLED/$sel" && nginx -t && systemctl reload nginx ;;
+		"7") exit 0 ;;
 		esac
 	done
 }
